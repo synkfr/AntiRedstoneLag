@@ -1,0 +1,18 @@
+# Maximum redstone updates per chunk per second
+chunk-threshold: 500
+
+# Updates per block before being considered a lag machine
+block-threshold: 15
+
+# Redstone components to monitor
+redstone-components:
+  - REDSTONE_WIRE
+  - REPEATER
+  - COMPARATOR
+  - OBSERVER
+  - PISTON
+  - STICKY_PISTON
+  - REDSTONE_TORCH
+  - REDSTONE_WALL_TORCH
+  - LEVER
+  - DAYLIGHT_DETECTOR

@@ -1,0 +1,14 @@
+name: AntiRedstoneLag
+version: '1.0'
+main: org.ayosynk.antiRedstoneLag.AntiRedstoneLag
+api-version: '1.21'
+description: Prevents redstone lag machines while allowing normal redstone
+author: AyoSynk
+commands:
+  arl-reload:
+    description: Reload plugin configuration
+    permission: antiredstonelag.reload
+permissions:
+  antiredstonelag.reload:
+    description: Allows reloading plugin configuration
+    default: op
