@@ -29,15 +29,26 @@ A modular, high-performance plugin designed to manage redstone activity on your 
 Open the `config.yml` file to fine-tune the plugin:
 
 ```yaml
-# Example: Configure max redstone updates per second
-threshold: 150  
+# Maximum redstone updates per chunk per second
+# if you don't know what this means don't touch it
+chunk-threshold: 500
 
-# Define monitored redstone components
+# Updates per block before being considered a lag machine
+# if you don't know what this means don't touch it
+block-threshold: 15
+
+# Redstone components to monitor
 redstone-components:
   - REDSTONE_WIRE
   - REPEATER
   - COMPARATOR
-````
+  - OBSERVER
+  - PISTON
+  - STICKY_PISTON
+  - REDSTONE_TORCH
+  - REDSTONE_WALL_TORCH
+  - LEVER
+  - DAYLIGHT_DETECTOR
 
 Use `/arl-reload` in-game or via console to apply config changes without restarting the server.
 
