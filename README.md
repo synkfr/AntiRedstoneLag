@@ -1,4 +1,4 @@
-
+![AntiRedstonelag plguin title](https://i.postimg.cc/x1mjs7hb/minecraft-title-3.png)
 # ⚙️ Advanced Redstone Limiter
 
 A modular, high-performance plugin designed to manage redstone activity on your Minecraft server. Prevent lag, enhance server stability, and fine-tune redstone mechanics with precision. Normal redstone auto-mated builds like gold farm, iron farm, etc will still work.
