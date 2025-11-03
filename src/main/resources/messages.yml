@@ -1,0 +1,39 @@
+# AntiRedstoneLag Premium Messages
+# Supports & color codes and &#RRGGBB hex colors
+
+alerts:
+  redstone-removed: |-
+    &#FF6B6B⚠ &cLag Machine Detected &7| &6AntiRedstoneLag
+    &7Location: &e{x}, {y}, {z} &7| World: &e{world}
+    &7Block: &e{material} &7| Chunk Updates: &e{chunk_count} &7| Block Updates: &e{block_count}
+    &7This redstone device was removed for server performance.
+
+commands:
+  reload-success: "&#4ECDC4✓ &aConfiguration and messages reloaded successfully!"
+  stats: |-
+    &#4ECDC4┌─ &bAntiRedstoneLag Statistics &7─┐
+    &7Chunks monitored: &e{chunks}
+    &7Blocks monitored: &e{blocks}
+    &7Total removals: &e{total_removals}
+    &7Removals today: &e{today_removals}
+    &7Performance impact: &a{performance}%
+    &#4ECDC4└────────────────────────┘
+  logs-info: |-
+    &#4ECDC4Logging System Information:
+    &7Status: {status}
+    &7Log folder: &e{folder}
+    &7Use &6/arl logs download &7to get latest log file
+  logs-download: "&#4ECDC4✓ &aLog file has been prepared for download!"
+  no-permission: "&#FF6B6B✗ &cYou don't have permission to use this command!"
+  help: |-
+    &#FFD93D┌─ &6AntiRedstoneLag &7v{version} ──────┐
+    &6/arl reload &7- Reload configuration and messages
+    &6/arl stats &7- View plugin statistics
+    &6/arl logs &7- View or download logs
+    &6/arl help &7- Show this help message
+    &#FFD93D└────────────────────────────┘
+
+messages:
+  enabled: "&#4ECDC4✓ &aAntiRedstoneLag v{version} has been enabled!"
+  disabled: "&#FF6B6B✗ &cAntiRedstoneLag has been disabled!"
+  prefix: "&#4ECDC4[ARL]&r "
