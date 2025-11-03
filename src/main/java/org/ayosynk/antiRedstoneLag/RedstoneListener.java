@@ -12,10 +12,15 @@ import org.bukkit.event.block.BlockRedstoneEvent;
 public class RedstoneListener implements Listener {
     private final CounterManager counterManager;
     private final ConfigManager configManager;
+    private final MessageManager messageManager;
+    private final LogManager logManager;
 
-    public RedstoneListener(CounterManager counterManager, ConfigManager configManager) {
+    public RedstoneListener(CounterManager counterManager, ConfigManager configManager,
+                            MessageManager messageManager, LogManager logManager) {
         this.counterManager = counterManager;
         this.configManager = configManager;
+        this.messageManager = messageManager;
+        this.logManager = logManager;
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -23,6 +28,12 @@ public class RedstoneListener implements Listener {
         Block block = event.getBlock();
         Material material = block.getType();
 
+        // Check if world is enabled
+        if (!configManager.isWorldEnabled(block.getWorld().getName())) {
+            return;
+        }
+
+        // Check if material is monitored
         if (!configManager.getRedstoneMaterials().contains(material)) {
             return;
         }
@@ -33,8 +44,12 @@ public class RedstoneListener implements Listener {
         counterManager.incrementCounters(chunk, location);
 
         if (counterManager.shouldDisable(chunk, location)) {
+            // Store material name before removing
+            String materialName = material.toString();
             block.setType(Material.AIR, false);
-            // Optional: Log action
+
+            // Handle removal (logging, alerts, etc.)
+            counterManager.handleRedstoneRemoval(location, material);
         }
     }
 }

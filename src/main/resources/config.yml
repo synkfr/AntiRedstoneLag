@@ -1,8 +1,27 @@
+# AntiRedstoneLag Premium Configuration
+# Advanced redstone lag prevention system
+
 # Maximum redstone updates per chunk per second
 chunk-threshold: 500
 
 # Updates per block before being considered a lag machine
 block-threshold: 15
+
+# Worlds where the plugin is active (use * for all worlds)
+enabled-worlds:
+  - "*"
+
+# Alert settings
+alerts:
+  enabled: true
+  log-to-console: true
+
+# Advanced logging system
+logging:
+  enabled: true
+  max-files: 10
+  max-size-mb: 10
+  performance-stats: true
 
 # Redstone components to monitor
 redstone-components:
@@ -16,3 +35,8 @@ redstone-components:
   - REDSTONE_WALL_TORCH
   - LEVER
   - DAYLIGHT_DETECTOR
+  - TARGET
+  - TRAPPED_CHEST
+  - DROPPER
+  - DISPENSER
+  - HOPPER

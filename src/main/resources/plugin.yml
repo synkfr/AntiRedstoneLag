@@ -1,14 +1,39 @@
 name: AntiRedstoneLag
-version: '1.0'
+version: '2.0.0'
 main: org.ayosynk.antiRedstoneLag.AntiRedstoneLag
 api-version: '1.21'
-description: Prevents redstone lag machines while allowing normal redstone
+description: Premium redstone lag prevention system with advanced monitoring
 author: AyoSynk
+website: https://yourwebsite.com
+depend: []
+softdepend: []
 commands:
-  arl-reload:
-    description: Reload plugin configuration
-    permission: antiredstonelag.reload
+  arl:
+    description: Main AntiRedstoneLag command
+    permission: antiredstonelag.use
+    usage: /<command> [reload|stats|logs|help]
 permissions:
+  antiredstonelag.*:
+    description: All AntiRedstoneLag permissions
+    default: op
+    children:
+      antiredstonelag.use: true
+      antiredstonelag.reload: true
+      antiredstonelag.stats: true
+      antiredstonelag.logs: true
+      antiredstonelag.alerts: true
+  antiredstonelag.use:
+    description: Use basic plugin commands
+    default: true
   antiredstonelag.reload:
-    description: Allows reloading plugin configuration
+    description: Reload plugin configuration
+    default: op
+  antiredstonelag.stats:
+    description: View plugin statistics
+    default: op
+  antiredstonelag.logs:
+    description: Access logging system
+    default: op
+  antiredstonelag.alerts:
+    description: Receive redstone removal alerts
     default: op
