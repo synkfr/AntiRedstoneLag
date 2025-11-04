@@ -20,9 +20,15 @@ A modular, high-performance plugin designed to manage redstone activity on your 
 - 🔄 **Auto Counter Reset** — All redstone counters reset every second for real-time control.
 - 🎯 **Selective Monitoring** — Monitor specific redstone components only.
 - 🧱 **Safe Block Removal** — Prevent physics updates during automatic redstone cleanup.
-- ♻️ **Hot Reload Support** — Instantly apply config changes with `/arl-reload`.
+- ♻️ **Hot Reload Support** — Instantly apply config changes with `/arl reload`.
+- 📢 **Clean Alert System** — Beautiful, formatted alerts with coordinates when redstone is removed.
+- 📝 **Advanced Logging** — File-based logging system with optional console mirroring.
+- 🌍 **World-Specific Control** — Enable or disable the plugin per world.
+- 📊 **Statistics Tracking** — View removal statistics and performance metrics.
 
 ---
+## 🔍 Preview
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/PMqz25ctRlU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 ## 🛠️ Configuration
 
@@ -37,6 +43,23 @@ chunk-threshold: 500
 # if you don't know what this means don't touch it
 block-threshold: 15
 
+# Worlds where the plugin is active (use * for all worlds)
+enabled-worlds:
+  - "*"
+
+# Alert settings
+alerts:
+  enabled: true
+  log-to-console: true
+
+# Advanced logging system
+logging:
+  enabled: true
+  console-mirror: false  # Set to true to mirror file logs to console
+  max-files: 10
+  max-size-mb: 10
+  performance-stats: true
+
 # Redstone components to monitor
 redstone-components:
   - REDSTONE_WIRE
@@ -49,32 +72,83 @@ redstone-components:
   - REDSTONE_WALL_TORCH
   - LEVER
   - DAYLIGHT_DETECTOR
+  - TARGET
+  - TRAPPED_CHEST
+  - DROPPER
+  - DISPENSER
+  - HOPPER
+```
 
-Use `/arl-reload` in-game or via console to apply config changes without restarting the server.
+### Configuration Options
+
+- **`chunk-threshold`**: Maximum redstone updates per chunk per second before triggering removal
+- **`block-threshold`**: Maximum updates per individual block before being considered a lag machine
+- **`enabled-worlds`**: List of worlds where the plugin is active (use `["*"]` for all worlds)
+- **`alerts.enabled`**: Enable/disable alert notifications to players
+- **`alerts.log-to-console`**: Send alert messages to console
+- **`logging.enabled`**: Enable file-based logging system
+- **`logging.console-mirror`**: Mirror all file logs to console (default: false to prevent spam)
+- **`logging.max-files`**: Maximum number of log files to keep
+- **`logging.max-size-mb`**: Maximum size per log file in megabytes
+- **`logging.performance-stats`**: Log performance statistics periodically
+
+Use `/arl reload` in-game or via console to apply config changes without restarting the server.
 
 ---
 
 ## 📘 Usage
 
-* ✅ Edit `config.yml` to:
+### Commands
 
+- `/arl reload` - Reload configuration and messages
+- `/arl stats` - View plugin statistics (total removals, chunks monitored, etc.)
+- `/arl logs` - View logging system information
+- `/arl logs download` - Download the latest log file
+- `/arl help` - Show help message
+
+### Permissions
+
+- `antiredstonelag.use` - Use basic plugin commands (default: true)
+- `antiredstonelag.reload` - Reload configuration (default: op)
+- `antiredstonelag.stats` - View statistics (default: op)
+- `antiredstonelag.logs` - Access logging system (default: op)
+- `antiredstonelag.alerts` - Receive redstone removal alerts (default: op)
+
+### Configuration
+
+* ✅ Edit `config.yml` to:
     * Adjust performance thresholds
     * Include/exclude redstone component types
-* 🔄 Apply changes using:
-
-  ```bash
-  /arl-reload
-  ```
+    * Configure world-specific settings
+    * Enable/disable alerts and logging
+* 🔄 Apply changes using: `/arl reload`
 
 ---
 
 ## 💡 Example Use Case
 
-A survival server might have player who builds lag-machine without permissions might experience lag spikes due to excessive redstone activity. With **Advanced Redstone Limiter**, you can:
+A survival server might have players who build lag-machines without permissions, causing lag spikes due to excessive redstone activity. With **Advanced Redstone Limiter**, you can:
 
 * Cap redstone ticks per second
 * Target only specific block types (e.g., `REPEATER`, `REDSTONE_WIRE`)
 * Safely auto-disable overactive components
+* Receive clean, formatted alerts with coordinates when redstone is removed
+* Track removal statistics and monitor performance
+
+### Alert Format
+
+When a lag machine is detected and removed, players with the `antiredstonelag.alerts` permission will receive a beautifully formatted alert:
+
+```
+┌─ ⚠ Lag Machine Detected ─┐
+│ Coordinates: 123, 64, 456 │
+│ World: world_name │
+│ Block: REDSTONE_WIRE │
+│ Chunk Updates: 501 │ Block Updates: 16 │
+└─ Removed for server performance ─┘
+```
+
+The coordinates make it easy to locate and investigate the removed redstone device.
 
 ---
 
@@ -86,10 +160,10 @@ A survival server might have player who builds lag-machine without permissions m
 
 ## 📜 License
 
-LandClaim is licensed under the MIT License.
+AntiRedstoneLag is licensed under the MIT License.
 
 ```license
-Copyright 2023 AyoSynk
+Copyright 2025 AyoSynk
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -111,9 +185,10 @@ SOFTWARE.
 ```
 ---
 
-## 🤝 Support & Contributions
+## ❓ Support
 
-Found a bug or want to suggest a feature?
-Feel free to open an [issue](https://github.com/your-repo/issues) or submit a pull request.
+For support or bug reports:  
+[![Discord](https://img.shields.io/discord/1378591879393710110?style=for-the-badge)](https://discord.gg/pAPPvSmWRK)  
+[![GitHub Issues](https://img.shields.io/github/issues/synkfr/AntiRedstoneLag?style=for-the-badge)](https://github.com/synkfr/AntiRedstoneLag/issues)
 
 ---

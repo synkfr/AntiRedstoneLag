@@ -17,6 +17,7 @@ public class LogManager {
     private final SimpleDateFormat dateFormat;
     private final SimpleDateFormat fileDateFormat;
     private boolean enabled;
+    private boolean consoleMirror;
     private int maxLogFiles;
     private long maxLogSize;
     private File logsFolder;
@@ -36,6 +37,7 @@ public class LogManager {
 
     private void setupLogging() {
         enabled = plugin.getConfig().getBoolean("logging.enabled", true);
+        consoleMirror = plugin.getConfig().getBoolean("logging.console-mirror", false);
         maxLogFiles = plugin.getConfig().getInt("logging.max-files", 10);
         maxLogSize = plugin.getConfig().getLong("logging.max-size-mb", 10) * 1024 * 1024;
 
@@ -109,7 +111,9 @@ public class LogManager {
         }
 
         logQueue.offer(logEntry);
-        plugin.getLogger().info(net.md_5.bungee.api.ChatColor.stripColor(logEntry));
+        if (consoleMirror) {
+            plugin.getLogger().info(net.md_5.bungee.api.ChatColor.stripColor(logEntry));
+        }
     }
 
     public void logRedstoneRemoval(Location location, Material material, int chunkCount, int blockCount, String reason) {

@@ -19,6 +19,7 @@ alerts:
 # Advanced logging system
 logging:
   enabled: true
+  console-mirror: false
   max-files: 10
   max-size-mb: 10
   performance-stats: true

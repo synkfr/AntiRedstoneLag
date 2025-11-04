@@ -3,10 +3,12 @@
 
 alerts:
   redstone-removed: |-
-    &#FF6B6B⚠ &cLag Machine Detected &7| &6AntiRedstoneLag
-    &7Location: &e{x}, {y}, {z} &7| World: &e{world}
-    &7Block: &e{material} &7| Chunk Updates: &e{chunk_count} &7| Block Updates: &e{block_count}
-    &7This redstone device was removed for server performance.
+    &#FF6B6B┌─ &c⚠ Lag Machine Detected &7─┐
+    &7│ &6Coordinates: &e{x}, {y}, {z} &7│
+    &7│ &6World: &e{world} &7│
+    &7│ &6Block: &e{material} &7│
+    &7│ &6Chunk Updates: &e{chunk_count} &7│ &6Block Updates: &e{block_count} &7│
+    &#FF6B6B└─ &7Removed for server performance ─┘
 
 commands:
   reload-success: "&#4ECDC4✓ &aConfiguration and messages reloaded successfully!"

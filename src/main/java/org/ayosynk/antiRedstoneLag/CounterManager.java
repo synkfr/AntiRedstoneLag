@@ -81,16 +81,21 @@ public class CounterManager {
                 .replace("{chunk_count}", String.valueOf(chunkCount))
                 .replace("{block_count}", String.valueOf(blockCount));
 
+        // Split multi-line messages
+        String[] lines = alertMessage.split("\n");
+
         // Send to all players with permission
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (player.hasPermission("antiredstonelag.alerts")) {
-                player.sendMessage(alertMessage);
+                player.sendMessage(lines);
             }
         }
 
         // Also log to console if enabled
         if (configManager.isLogToConsole()) {
-            Bukkit.getConsoleSender().sendMessage(alertMessage);
+            for (String line : lines) {
+                Bukkit.getConsoleSender().sendMessage(line);
+            }
         }
     }
 
