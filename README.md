@@ -1,66 +1,102 @@
-![AntiRedstonelag plguin title](https://i.postimg.cc/x1mjs7hb/minecraft-title-3.png)
-# ⚙️ Advanced Redstone Limiter
+![AntiRedstoneLag](https://i.postimg.cc/x1mjs7hb/minecraft-title-3.png)
 
-A modular, high-performance plugin designed to manage redstone activity on your Minecraft server. Prevent lag, enhance server stability, and fine-tune redstone mechanics with precision. Normal redstone auto-mated builds like gold farm, iron farm, etc will still work.
+<div align="center">
 
---- 
+[![Version](https://img.shields.io/badge/version-2.0.0-blue?style=flat-square)](https://github.com/synkfr/AntiRedstoneLag/releases)
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.21+-green?style=flat-square)](https://www.minecraft.net/)
+[![License](https://img.shields.io/badge/license-MIT-orange?style=flat-square)](LICENSE)
+[![Discord](https://img.shields.io/discord/1378591879393710110?style=flat-square&label=Discord)](https://discord.gg/pAPPvSmWRK)
+
+**High-performance redstone lag prevention for Minecraft servers**
+
+[Features](#-features) • [Installation](#-installation) • [Configuration](#-configuration) • [Commands](#-commands) • [Support](#-support)
+
+</div>
+
+---
+
+## � About
+
+AntiRedstoneLag is a lightweight, high-performance plugin that prevents redstone-based lag machines from crashing your server. It intelligently monitors redstone activity per chunk and block, automatically handling excessive usage while allowing normal redstone builds (farms, doors, etc.) to function normally.
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| **Smart Detection** | Monitors redstone updates per chunk and block with configurable thresholds |
+| **Multiple Actions** | Choose to remove, disable, or drop problematic redstone |
+| **Warning System** | Warns players before their redstone is removed |
+| **Bypass Permission** | Allow trusted players to bypass limits |
+| **Whitelist Mode** | Only monitor specific chunks instead of all |
+| **Persistent Stats** | Statistics survive server restarts |
+| **Update Checker** | Get notified when new versions are available |
+| **Hot Reload** | Apply config changes without restart |
+| **World Control** | Enable/disable per world |
+| **Advanced Logging** | File-based logging with rotation |
+
+---
 
 ## 📦 Installation
 
-1. **Build** the plugin by compiling the provided classes into a `.jar` file.
-2. **Place** the `.jar` in your server's `plugins/` directory.
-3. **Restart** or **start** the server.
+1. Download the latest release from [Releases](https://github.com/synkfr/AntiRedstoneLag/releases)
+2. Place the `.jar` in your server's `plugins/` folder
+3. Restart your server
+4. Configure in `plugins/AntiRedstoneLag/config.yml`
+
+**Requirements:** Paper/Spigot 1.21+ (Java 21)
 
 ---
 
-## 🚀 Features
+## ⚙️ Configuration
 
-- ✅ **Modular Design** — Update or extend easily without modifying the core logic.
-- 🎚️ **Configurable Thresholds** — Set redstone usage limits that suit your server's needs.
-- 🔄 **Auto Counter Reset** — All redstone counters reset every second for real-time control.
-- 🎯 **Selective Monitoring** — Monitor specific redstone components only.
-- 🧱 **Safe Block Removal** — Prevent physics updates during automatic redstone cleanup.
-- ♻️ **Hot Reload Support** — Instantly apply config changes with `/arl reload`.
-- 📢 **Clean Alert System** — Beautiful, formatted alerts with coordinates when redstone is removed.
-- 📝 **Advanced Logging** — File-based logging system with optional console mirroring.
-- 🌍 **World-Specific Control** — Enable or disable the plugin per world.
-- 📊 **Statistics Tracking** — View removal statistics and performance metrics.
-
----
-## 🔍 Preview
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/PMqz25ctRlU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-
-## 🛠️ Configuration
-
-Open the `config.yml` file to fine-tune the plugin:
+<details>
+<summary><b>Click to expand full config.yml</b></summary>
 
 ```yaml
-# Maximum redstone updates per chunk per second
-# if you don't know what this means don't touch it
-chunk-threshold: 500
+# Thresholds
+chunk-threshold: 500      # Max redstone updates per chunk per reset
+block-threshold: 15       # Max updates per block before action
 
-# Updates per block before being considered a lag machine
-# if you don't know what this means don't touch it
-block-threshold: 15
+# Reset interval in ticks (20 = 1 second)
+reset-interval-ticks: 20
 
-# Worlds where the plugin is active (use * for all worlds)
+# Debug mode for troubleshooting
+debug: false
+
+# Action when threshold exceeded: REMOVE, DISABLE, or DROP
+removal-action: REMOVE
+
+# Warning system
+warning:
+  enabled: true
+  threshold-percent: 80   # Warn at 80% of threshold
+
+# Worlds to monitor (use * for all)
 enabled-worlds:
   - "*"
 
-# Alert settings
+# Whitelist mode - only monitor specific chunks
+whitelist:
+  enabled: false
+  chunks:
+    - "world:0:0"
+
+# Alerts
 alerts:
   enabled: true
   log-to-console: true
 
-# Advanced logging system
+# Logging
 logging:
   enabled: true
-  console-mirror: false  # Set to true to mirror file logs to console
+  console-mirror: false
   max-files: 10
   max-size-mb: 10
   performance-stats: true
 
-# Redstone components to monitor
+# Monitored components
 redstone-components:
   - REDSTONE_WIRE
   - REPEATER
@@ -79,116 +115,92 @@ redstone-components:
   - HOPPER
 ```
 
-### Configuration Options
+</details>
 
-- **`chunk-threshold`**: Maximum redstone updates per chunk per second before triggering removal
-- **`block-threshold`**: Maximum updates per individual block before being considered a lag machine
-- **`enabled-worlds`**: List of worlds where the plugin is active (use `["*"]` for all worlds)
-- **`alerts.enabled`**: Enable/disable alert notifications to players
-- **`alerts.log-to-console`**: Send alert messages to console
-- **`logging.enabled`**: Enable file-based logging system
-- **`logging.console-mirror`**: Mirror all file logs to console (default: false to prevent spam)
-- **`logging.max-files`**: Maximum number of log files to keep
-- **`logging.max-size-mb`**: Maximum size per log file in megabytes
-- **`logging.performance-stats`**: Log performance statistics periodically
+### Key Options
 
-Use `/arl reload` in-game or via console to apply config changes without restarting the server.
+| Option | Default | Description |
+|--------|---------|-------------|
+| `chunk-threshold` | 500 | Max redstone updates per chunk per reset interval |
+| `block-threshold` | 15 | Max updates per block before considered a lag machine |
+| `removal-action` | REMOVE | Action to take: `REMOVE`, `DISABLE`, or `DROP` |
+| `warning.enabled` | true | Warn players before removing their redstone |
+| `whitelist.enabled` | false | Only monitor whitelisted chunks |
 
 ---
 
-## 📘 Usage
+## 💻 Commands
 
-### Commands
-
-- `/arl reload` - Reload configuration and messages
-- `/arl stats` - View plugin statistics (total removals, chunks monitored, etc.)
-- `/arl logs` - View logging system information
-- `/arl logs download` - Download the latest log file
-- `/arl help` - Show help message
-
-### Permissions
-
-- `antiredstonelag.use` - Use basic plugin commands (default: true)
-- `antiredstonelag.reload` - Reload configuration (default: op)
-- `antiredstonelag.stats` - View statistics (default: op)
-- `antiredstonelag.logs` - Access logging system (default: op)
-- `antiredstonelag.alerts` - Receive redstone removal alerts (default: op)
-
-### Configuration
-
-* ✅ Edit `config.yml` to:
-    * Adjust performance thresholds
-    * Include/exclude redstone component types
-    * Configure world-specific settings
-    * Enable/disable alerts and logging
-* 🔄 Apply changes using: `/arl reload`
+| Command | Description | Permission |
+|---------|-------------|------------|
+| `/arl help` | Show help message | `antiredstonelag.use` |
+| `/arl reload` | Reload configuration | `antiredstonelag.reload` |
+| `/arl stats` | View statistics | `antiredstonelag.stats` |
+| `/arl logs` | View logging info | `antiredstonelag.logs` |
+| `/arl logs download` | Get latest log file info | `antiredstonelag.logs` |
 
 ---
 
-## 💡 Example Use Case
+## 🔐 Permissions
 
-A survival server might have players who build lag-machines without permissions, causing lag spikes due to excessive redstone activity. With **Advanced Redstone Limiter**, you can:
+| Permission | Description | Default |
+|------------|-------------|---------|
+| `antiredstonelag.use` | Use basic commands | true |
+| `antiredstonelag.reload` | Reload configuration | op |
+| `antiredstonelag.stats` | View statistics | op |
+| `antiredstonelag.logs` | Access logs | op |
+| `antiredstonelag.alerts` | Receive removal alerts | op |
+| `antiredstonelag.bypass` | Bypass redstone limits | false |
+| `antiredstonelag.admin` | Receive update notifications | op |
 
-* Cap redstone ticks per second
-* Target only specific block types (e.g., `REPEATER`, `REDSTONE_WIRE`)
-* Safely auto-disable overactive components
-* Receive clean, formatted alerts with coordinates when redstone is removed
-* Track removal statistics and monitor performance
+---
 
-### Alert Format
+## 🔔 Alert Example
 
-When a lag machine is detected and removed, players with the `antiredstonelag.alerts` permission will receive a beautifully formatted alert:
+When a lag machine is detected:
 
 ```
-┌─ ⚠ Lag Machine Detected ─┐
-│ Coordinates: 123, 64, 456 │
-│ World: world_name │
-│ Block: REDSTONE_WIRE │
-│ Chunk Updates: 501 │ Block Updates: 16 │
+┌─ ⚠ Lag Machine Detected ─────────┐
+│ Coordinates: 123, 64, 456        │
+│ World: world                     │
+│ Block: REDSTONE_WIRE             │
+│ Chunk: 501 │ Block: 16           │
 └─ Removed for server performance ─┘
 ```
 
-The coordinates make it easy to locate and investigate the removed redstone device.
+---
+
+## 🧩 Compatibility
+
+| Platform | Status |
+|----------|--------|
+| Paper 1.21+ | ✅ Supported |
+| Spigot 1.21+ | ✅ Supported |
+| Purpur 1.21+ | ✅ Supported |
+| Folia | ❌ Not yet |
 
 ---
 
-## 🧩 Plugin Compatibility
+## � Performance
 
-✔️ Supports Paper, Spigot, Purpur, and compatible forks.
+AntiRedstoneLag is optimized for minimal server impact:
+
+- **Primitive collections** (fastutil) to reduce memory overhead
+- **Batched log writes** to minimize I/O
+- **Cached config values** to avoid repeated lookups
+- **String keys** instead of object keys to prevent memory leaks
+- **Lazy Location creation** only when needed
+
+---
+
+## ❓ Support
+
+[![Discord](https://img.shields.io/discord/1378591879393710110?style=for-the-badge&logo=discord&label=Discord)](https://discord.gg/pAPPvSmWRK)
+[![GitHub Issues](https://img.shields.io/github/issues/synkfr/AntiRedstoneLag?style=for-the-badge&logo=github)](https://github.com/synkfr/AntiRedstoneLag/issues)
 
 ---
 
 ## 📜 License
 
-AntiRedstoneLag is licensed under the MIT License.
+MIT License - Copyright 2025 AyoSynk
 
-```license
-Copyright 2025 AyoSynk
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
----
-
-## ❓ Support
-
-For support or bug reports:  
-[![Discord](https://img.shields.io/discord/1378591879393710110?style=for-the-badge)](https://discord.gg/pAPPvSmWRK)  
-[![GitHub Issues](https://img.shields.io/github/issues/synkfr/AntiRedstoneLag?style=for-the-badge)](https://github.com/synkfr/AntiRedstoneLag/issues)
-
----
