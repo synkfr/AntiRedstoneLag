@@ -11,6 +11,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
 public class LogManager {
+    private static final int BATCH_SIZE = 50; // Flush after this many entries
+    private static final long FLUSH_INTERVAL_MS = 500; // Flush at least every 500ms
+
     private final JavaPlugin plugin;
     private final ConcurrentLinkedQueue<String> logQueue;
     private BufferedWriter logWriter;
@@ -23,6 +26,8 @@ public class LogManager {
     private File logsFolder;
     private volatile boolean running;
     private Thread logThread;
+    private volatile long lastFlushTime;
+    private volatile int pendingWrites;
 
     public LogManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -89,11 +94,54 @@ public class LogManager {
                 if (logEntry != null) {
                     logWriter.write(logEntry);
                     logWriter.newLine();
-                    logWriter.flush();
+                    pendingWrites++;
                 }
+            }
+
+            // Batch flush: only flush if we have enough entries or enough time has passed
+            long now = System.currentTimeMillis();
+            if (pendingWrites >= BATCH_SIZE || (pendingWrites > 0 && now - lastFlushTime >= FLUSH_INTERVAL_MS)) {
+                logWriter.flush();
+                pendingWrites = 0;
+                lastFlushTime = now;
+
+                // Check log rotation on flush
+                checkLogRotation();
             }
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to write to log file!", e);
+        }
+    }
+
+    private void checkLogRotation() {
+        if (logsFolder == null) return;
+
+        String currentDate = fileDateFormat.format(new Date());
+        File currentLogFile = new File(logsFolder, "redstone-logs-" + currentDate + ".log");
+
+        if (currentLogFile.exists() && currentLogFile.length() > maxLogSize) {
+            rotateLogFile(currentLogFile, currentDate);
+        }
+    }
+
+    private void rotateLogFile(File currentLogFile, String currentDate) {
+        try {
+            // Close current writer
+            if (logWriter != null) {
+                logWriter.close();
+            }
+
+            // Rename to rotated file
+            String timestamp = new SimpleDateFormat("HH-mm-ss").format(new Date());
+            File rotatedFile = new File(logsFolder, "redstone-logs-" + currentDate + "-" + timestamp + ".log");
+            currentLogFile.renameTo(rotatedFile);
+
+            // Create new log file
+            currentLogFile.createNewFile();
+            logWriter = new BufferedWriter(new FileWriter(currentLogFile, true));
+            logToFile("SYSTEM", "Log file rotated due to size limit", null);
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to rotate log file!", e);
         }
     }
 
@@ -151,24 +199,8 @@ public class LogManager {
             }
         }
 
-        // Check current log file size
-        String currentDate = fileDateFormat.format(new Date());
-        File currentLogFile = new File(logsFolder, "redstone-logs-" + currentDate + ".log");
-
-        if (currentLogFile.exists() && currentLogFile.length() > maxLogSize) {
-            // Rotate log file
-            String timestamp = new SimpleDateFormat("HH-mm-ss").format(new Date());
-            File rotatedFile = new File(logsFolder, "redstone-logs-" + currentDate + "-" + timestamp + ".log");
-            currentLogFile.renameTo(rotatedFile);
-
-            try {
-                currentLogFile.createNewFile();
-                logWriter = new BufferedWriter(new FileWriter(currentLogFile, true));
-                logToFile("SYSTEM", "Log file rotated due to size limit", null);
-            } catch (IOException e) {
-                plugin.getLogger().log(Level.SEVERE, "Failed to rotate log file!", e);
-            }
-        }
+        // Check current log file size (also checked on flush now)
+        checkLogRotation();
     }
 
     public void close() {

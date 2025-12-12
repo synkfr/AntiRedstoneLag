@@ -1,15 +1,39 @@
 # AntiRedstoneLag Premium Configuration
 # Advanced redstone lag prevention system
 
-# Maximum redstone updates per chunk per second
+# Maximum redstone updates per chunk per reset interval
 chunk-threshold: 500
 
 # Updates per block before being considered a lag machine
 block-threshold: 15
 
+# Counter reset interval in ticks (20 ticks = 1 second)
+reset-interval-ticks: 20
+
+# Enable debug mode for verbose logging
+debug: false
+
+# Action to take when redstone exceeds threshold
+# Options: REMOVE (set to air), DISABLE (cancel redstone signal), DROP (break and drop item)
+removal-action: REMOVE
+
+# Warning system - warn players before removing their redstone
+warning:
+  enabled: true
+  # Percentage of threshold at which to warn (e.g., 80 = warn at 80% of threshold)
+  threshold-percent: 80
+
 # Worlds where the plugin is active (use * for all worlds)
 enabled-worlds:
   - "*"
+
+# Whitelist mode - only monitor specific chunks instead of all chunks
+# When enabled, only chunks in the whitelist will be monitored
+whitelist:
+  enabled: false
+  # List chunks as "world:chunkX:chunkZ" (e.g., "world:10:15")
+  chunks:
+    - "world:0:0"
 
 # Alert settings
 alerts:

@@ -22,6 +22,7 @@ permissions:
       antiredstonelag.stats: true
       antiredstonelag.logs: true
       antiredstonelag.alerts: true
+      antiredstonelag.bypass: true
   antiredstonelag.use:
     description: Use basic plugin commands
     default: true
@@ -37,3 +38,6 @@ permissions:
   antiredstonelag.alerts:
     description: Receive redstone removal alerts
     default: op
+  antiredstonelag.bypass:
+    description: Bypass redstone limits
+    default: false
