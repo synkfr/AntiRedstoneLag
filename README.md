@@ -40,7 +40,7 @@ AntiRedstoneLag is a lightweight, high-performance plugin that prevents redstone
 
 ## 📦 Installation
 
-1. Download the latest release from [Releases](https://github.com/synkfr/AntiRedstoneLag/releases)
+1. Download the latest release from [Releases](https://modrinth.com/plugin/antiredstonelag)
 2. Place the `.jar` in your server's `plugins/` folder
 3. Restart your server
 4. Configure in `plugins/AntiRedstoneLag/config.yml`
