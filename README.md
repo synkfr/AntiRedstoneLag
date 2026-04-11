@@ -2,86 +2,85 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue?style=flat-square)](https://github.com/synkfr/AntiRedstoneLag/releases)
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.21+-green?style=flat-square)](https://www.minecraft.net/)
-[![License](https://img.shields.io/badge/license-MIT-orange?style=flat-square)](LICENSE)
-[![Discord](https://img.shields.io/discord/1378591879393710110?style=flat-square&label=Discord)](https://discord.gg/pAPPvSmWRK)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue?style=for-the-badge&logo=github)](https://github.com/synkfr/AntiRedstoneLag/releases)
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.21+-green?style=for-the-badge&logo=minecraft)](https://www.minecraft.net/)
+[![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](LICENSE)
+[![Discord](https://img.shields.io/discord/1378591879393710110?style=for-the-badge&logo=discord&label=Discord)](https://discord.gg/fGyDyp3Ak4)
 
-**High-performance redstone lag prevention for Minecraft servers**
+**The Ultimate High-Performance Redstone Lag Prevention for Modern Minecraft Servers**
 
-[Features](#-features) • [Installation](#-installation) • [Configuration](#-configuration) • [Commands](#-commands) • [Support](#-support)
+[Features](#-features) • [Performance Specs](#-performance) • [Installation](#-installation) • [Commands](#-commands) • [Developer Builds](#-automated-builds)
 
 </div>
 
 ---
 
-## � About
+## ⚡ About AntiRedstoneLag
 
-AntiRedstoneLag is a lightweight, high-performance plugin that prevents redstone-based lag machines from crashing your server. It intelligently monitors redstone activity per chunk and block, automatically handling excessive usage while allowing normal redstone builds (farms, doors, etc.) to function normally.
+AntiRedstoneLag is a lightweight yet extremely powerful plugin designed to safeguard your server from redstone-based lag machines and accidental over-engineering. Unlike basic limiters, AntiRedstoneLag uses **asynchronous logging** and **O(1) tracking structures** to monitor redstone activity with zero impact on your server's tick rate.
 
 ---
 
 ## ✨ Features
 
-| Feature | Description |
-|---------|-------------|
-| **Smart Detection** | Monitors redstone updates per chunk and block with configurable thresholds |
-| **Multiple Actions** | Choose to remove, disable, or drop problematic redstone |
-| **Warning System** | Warns players before their redstone is removed |
-| **Bypass Permission** | Allow trusted players to bypass limits |
-| **Whitelist Mode** | Only monitor specific chunks instead of all |
-| **Persistent Stats** | Statistics survive server restarts |
-| **Update Checker** | Get notified when new versions are available |
-| **Hot Reload** | Apply config changes without restart |
-| **World Control** | Enable/disable per world |
-| **Advanced Logging** | File-based logging with rotation |
+- 🚀 **Asynchronous Foundation**: Logging and timestamp generation are offloaded to background threads.
+- 🎯 **O(1) Chunk Cleanup**: Refactored tracking logic for instant cleanup during chunk unloading.
+- 🌈 **Modern UI**: Full migration to **Adventure API** and **MiniMessage** for beautiful, hex-color alerts.
+- 🛡️ **Lag Guard 1.21**: Specifically optimized for Paper 1.21+ physics and redstone handling.
+- ⚙️ **Smart Actions**: Choose between `REMOVE` (with physics notifications), `DROP`, or `DISABLE`.
+- 📊 **Persistent Analytics**: Statistics tracking that survives server restarts.
+- 🔄 **Automated CI/CD**: Development builds published automatically via GitHub Actions.
+
+---
+
+## 🚀 Performance Specs
+
+| Optimization | Method | Impact |
+| :--- | :--- | :--- |
+| **Tracking** | Nested Concurrent Maps | **O(1)** Chunk Cleanup |
+| **Messaging** | Adventure API | Hex & Gradient Support |
+| **Logging** | Async Timestamping | Zero Main-Thread Overhead |
+| **Memory** | Fastutil Collections | Reduced Boxing/GC Pressure |
 
 ---
 
 ## 📦 Installation
 
-1. Download the latest release from [Releases](https://modrinth.com/plugin/antiredstonelag)
-2. Place the `.jar` in your server's `plugins/` folder
-3. Restart your server
-4. Configure in `plugins/AntiRedstoneLag/config.yml`
+1. Download the latest release from [Modrinth](https://modrinth.com/plugin/antiredstonelag) or [GitHub](https://github.com/synkfr/AntiRedstoneLag/releases).
+2. Place the `.jar` in your server's `plugins/` folder.
+3. Restart your server.
+4. Configure limits in `plugins/AntiRedstoneLag/config.yml`.
 
-**Requirements:** Paper/Spigot 1.21+ (Java 21)
+> [!IMPORTANT]
+> **Requirements:** Paper, Spigot, or Purpur **1.21.1+** and **Java 21**.
 
 ---
 
-## ⚙️ Configuration
+## 🛠️ Configuration
+
+Modern power and simplicity. AntiRedstoneLag supports **MiniMessage** hex codes (`<gold>`, `<#ffcc00>`, etc.) in all messages.
 
 <details>
-<summary><b>Click to expand full config.yml</b></summary>
+<summary><b>View Optimized config.yml</b></summary>
 
 ```yaml
 # Thresholds
-chunk-threshold: 500      # Max redstone updates per chunk per reset
-block-threshold: 15       # Max updates per block before action
+chunk-threshold: 500      # Max redstone updates per chunk per resetting interval
+block-threshold: 15       # Max updates per individual block before action
 
 # Reset interval in ticks (20 = 1 second)
 reset-interval-ticks: 20
 
-# Debug mode for troubleshooting
-debug: false
-
 # Action when threshold exceeded: REMOVE, DISABLE, or DROP
+# REMOVE: Clears block (Recommended)
+# DISABLE: Cancels active signals
+# DROP: Breaks block and drops items
 removal-action: REMOVE
 
 # Warning system
 warning:
   enabled: true
   threshold-percent: 80   # Warn at 80% of threshold
-
-# Worlds to monitor (use * for all)
-enabled-worlds:
-  - "*"
-
-# Whitelist mode - only monitor specific chunks
-whitelist:
-  enabled: false
-  chunks:
-    - "world:0:0"
 
 # Alerts
 alerts:
@@ -91,116 +90,39 @@ alerts:
 # Logging
 logging:
   enabled: true
-  console-mirror: false
-  max-files: 10
-  max-size-mb: 10
   performance-stats: true
-
-# Monitored components
-redstone-components:
-  - REDSTONE_WIRE
-  - REPEATER
-  - COMPARATOR
-  - OBSERVER
-  - PISTON
-  - STICKY_PISTON
-  - REDSTONE_TORCH
-  - REDSTONE_WALL_TORCH
-  - LEVER
-  - DAYLIGHT_DETECTOR
-  - TARGET
-  - TRAPPED_CHEST
-  - DROPPER
-  - DISPENSER
-  - HOPPER
 ```
-
 </details>
 
-### Key Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `chunk-threshold` | 500 | Max redstone updates per chunk per reset interval |
-| `block-threshold` | 15 | Max updates per block before considered a lag machine |
-| `removal-action` | REMOVE | Action to take: `REMOVE`, `DISABLE`, or `DROP` |
-| `warning.enabled` | true | Warn players before removing their redstone |
-| `whitelist.enabled` | false | Only monitor whitelisted chunks |
-
 ---
 
-## 💻 Commands
+## 💻 Commands & Permissions
 
 | Command | Description | Permission |
-|---------|-------------|------------|
-| `/arl help` | Show help message | `antiredstonelag.use` |
-| `/arl reload` | Reload configuration | `antiredstonelag.reload` |
-| `/arl stats` | View statistics | `antiredstonelag.stats` |
-| `/arl logs` | View logging info | `antiredstonelag.logs` |
-| `/arl logs download` | Get latest log file info | `antiredstonelag.logs` |
+| :--- | :--- | :--- |
+| `/arl help` | View command help | `antiredstonelag.use` |
+| `/arl reload` | Hot-reload config | `antiredstonelag.reload` |
+| `/arl stats` | Real-time performance stats | `antiredstonelag.stats` |
+| `/arl logs` | View removal history | `antiredstonelag.logs` |
 
 ---
 
-## 🔐 Permissions
+## 🏗️ Automated Builds
 
-| Permission | Description | Default |
-|------------|-------------|---------|
-| `antiredstonelag.use` | Use basic commands | true |
-| `antiredstonelag.reload` | Reload configuration | op |
-| `antiredstonelag.stats` | View statistics | op |
-| `antiredstonelag.logs` | Access logs | op |
-| `antiredstonelag.alerts` | Receive removal alerts | op |
-| `antiredstonelag.bypass` | Bypass redstone limits | false |
-| `antiredstonelag.admin` | Receive update notifications | op |
+We use GitHub Actions to ensure code quality and instant delivery. Every push to `master` triggers a development build.
 
----
-
-## 🔔 Alert Example
-
-When a lag machine is detected:
-
-```
-┌─ ⚠ Lag Machine Detected ─────────┐
-│ Coordinates: 123, 64, 456        │
-│ World: world                     │
-│ Block: REDSTONE_WIRE             │
-│ Chunk: 501 │ Block: 16           │
-└─ Removed for server performance ─┘
-```
-
----
-
-## 🧩 Compatibility
-
-| Platform | Status |
-|----------|--------|
-| Paper 1.21+ | ✅ Supported |
-| Spigot 1.21+ | ✅ Supported |
-| Purpur 1.21+ | ✅ Supported |
-| Folia | ❌ Not yet |
-
----
-
-## � Performance
-
-AntiRedstoneLag is optimized for minimal server impact:
-
-- **Primitive collections** (fastutil) to reduce memory overhead
-- **Batched log writes** to minimize I/O
-- **Cached config values** to avoid repeated lookups
-- **String keys** instead of object keys to prevent memory leaks
-- **Lazy Location creation** only when needed
+> [!TIP]
+> **Beta Testing:** Want the latest fixes before a stable release? Download the latest **Development Pre-release** from the [Repository Actions](https://github.com/synkfr/AntiRedstoneLag/actions) or the [Releases](https://github.com/synkfr/AntiRedstoneLag/releases) tab (labeled with `dev-bX`).
 
 ---
 
 ## ❓ Support
 
-[![Discord](https://img.shields.io/discord/1378591879393710110?style=for-the-badge&logo=discord&label=Discord)](https://discord.gg/pAPPvSmWRK)
-[![GitHub Issues](https://img.shields.io/github/issues/synkfr/AntiRedstoneLag?style=for-the-badge&logo=github)](https://github.com/synkfr/AntiRedstoneLag/issues)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Server-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/fGyDyp3Ak4)
+[![GitHub Issues](https://img.shields.io/badge/GitHub-Issues-red?style=for-the-badge&logo=github)](https://github.com/synkfr/AntiRedstoneLag/issues)
 
 ---
 
 ## 📜 License
 
-MIT License - Copyright 2025 AyoSynk
-
+MIT License - Copyright © 2025 AyoSynk. Developed with ❤️ for the Minecraft High-Performance Community.
