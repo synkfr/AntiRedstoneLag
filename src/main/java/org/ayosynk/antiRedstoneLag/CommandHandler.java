@@ -61,15 +61,14 @@ public class CommandHandler implements CommandExecutor {
     }
 
     private void showHelp(CommandSender sender) {
-        String helpMessage = messageManager.getMessage("commands.help",
+        plugin.adventure().sender(sender).sendMessage(messageManager.getMessage("commands.help",
                         "&#FFD93D┌─ &6AntiRedstoneLag &7v{version} ──────┐\n" +
                                 "&6/arl reload &7- Reload configuration and messages\n" +
                                 "&6/arl stats &7- View plugin statistics\n" +
                                 "&6/arl logs &7- View or download logs\n" +
                                 "&6/arl help &7- Show this help message\n" +
                                 "&#FFD93D└────────────────────────────┘")
-                .replace("{version}", plugin.getDescription().getVersion());
-        sender.sendMessage(helpMessage);
+                .replaceText(t -> t.matchLiteral("{version}").replacement(plugin.getDescription().getVersion())));
     }
 
     private void reloadCommand(CommandSender sender) {
@@ -82,13 +81,12 @@ public class CommandHandler implements CommandExecutor {
             listener.refreshCache();
         }
 
-        String reloadMessage = messageManager.getMessage("commands.reload-success", "&#4ECDC4✓ &aConfiguration and messages reloaded successfully!");
-        sender.sendMessage(reloadMessage);
+        plugin.adventure().sender(sender).sendMessage(messageManager.getMessage("commands.reload-success", "&#4ECDC4✓ &aConfiguration and messages reloaded successfully!"));
         logManager.logToFile("COMMAND", sender.getName() + " executed reload command", null);
     }
 
     private void statsCommand(CommandSender sender) {
-        String statsMessage = messageManager.getMessage("commands.stats",
+        plugin.adventure().sender(sender).sendMessage(messageManager.getMessage("commands.stats",
                         "&#4ECDC4┌─ &bAntiRedstoneLag Statistics &7─┐\n" +
                                 "&7Chunks monitored: &e{chunks}\n" +
                                 "&7Blocks monitored: &e{blocks}\n" +
@@ -96,12 +94,11 @@ public class CommandHandler implements CommandExecutor {
                                 "&7Removals today: &e{today_removals}\n" +
                                 "&7Performance: &a{performance}%\n" +
                                 "&#4ECDC4└────────────────────────┘")
-                .replace("{chunks}", String.valueOf(counterManager.getChunksMonitored()))
-                .replace("{blocks}", String.valueOf(counterManager.getBlocksMonitored()))
-                .replace("{total_removals}", String.valueOf(counterManager.getTotalRemovals()))
-                .replace("{today_removals}", String.valueOf(counterManager.getRemovalsToday()))
-                .replace("{performance}", "100");
-        sender.sendMessage(statsMessage);
+                .replaceText(t -> t.matchLiteral("{chunks}").replacement(String.valueOf(counterManager.getChunksMonitored())))
+                .replaceText(t -> t.matchLiteral("{blocks}").replacement(String.valueOf(counterManager.getBlocksMonitored())))
+                .replaceText(t -> t.matchLiteral("{total_removals}").replacement(String.valueOf(counterManager.getTotalRemovals())))
+                .replaceText(t -> t.matchLiteral("{today_removals}").replacement(String.valueOf(counterManager.getRemovalsToday())))
+                .replaceText(t -> t.matchLiteral("{performance}").replacement("100")));
     }
 
     private void logsCommand(CommandSender sender, String[] args) {
@@ -109,27 +106,26 @@ public class CommandHandler implements CommandExecutor {
             // Provide log file to player
             provideLogFile((Player) sender);
         } else {
-            String logInfo = messageManager.getMessage("commands.logs-info",
+            plugin.adventure().sender(sender).sendMessage(messageManager.getMessage("commands.logs-info",
                             "&#4ECDC4Logging Information:\n" +
                                     "&7Status: {status}\n" +
                                     "&7Log folder: &e{folder}\n" +
                                     "&7Use &6/arl logs download &7to get latest log file")
-                    .replace("{status}", logManager.isEnabled() ? "&aEnabled" : "&cDisabled")
-                    .replace("{folder}", logManager.getLogsFolder().getAbsolutePath());
-            sender.sendMessage(logInfo);
+                    .replaceText(t -> t.matchLiteral("{status}").replacement(logManager.isEnabled() ? "Enabled" : "Disabled"))
+                    .replaceText(t -> t.matchLiteral("{folder}").replacement(logManager.getLogsFolder().getAbsolutePath())));
         }
     }
 
     private void provideLogFile(Player player) {
         File logsFolder = logManager.getLogsFolder();
         if (logsFolder == null || !logsFolder.exists()) {
-            player.sendMessage(messageManager.getMessage("commands.logs-no-folder", "&#FF6B6B✗ &cLogs folder not found!"));
+            plugin.adventure().player(player).sendMessage(messageManager.getMessage("commands.logs-no-folder", "&#FF6B6B✗ &cLogs folder not found!"));
             return;
         }
 
         File[] logFiles = logsFolder.listFiles((dir, name) -> name.startsWith("redstone-logs-") && name.endsWith(".log"));
         if (logFiles == null || logFiles.length == 0) {
-            player.sendMessage(messageManager.getMessage("commands.logs-empty", "&#FF6B6B✗ &cNo log files found!"));
+            plugin.adventure().player(player).sendMessage(messageManager.getMessage("commands.logs-empty", "&#FF6B6B✗ &cNo log files found!"));
             return;
         }
 
@@ -142,19 +138,17 @@ public class CommandHandler implements CommandExecutor {
         String fileSize = formatFileSize(latestLog.length());
         String lastModified = sdf.format(new Date(latestLog.lastModified()));
 
-        String logInfo = messageManager.getMessage("commands.logs-file-info",
+        plugin.adventure().player(player).sendMessage(messageManager.getMessage("commands.logs-file-info",
                         "&#4ECDC4┌─ &bLatest Log File &7─┐\n" +
                                 "&7File: &e{filename}\n" +
                                 "&7Size: &e{size}\n" +
                                 "&7Modified: &e{modified}\n" +
                                 "&7Path: &e{path}\n" +
                                 "&#4ECDC4└────────────────────┘")
-                .replace("{filename}", latestLog.getName())
-                .replace("{size}", fileSize)
-                .replace("{modified}", lastModified)
-                .replace("{path}", latestLog.getAbsolutePath());
-
-        player.sendMessage(logInfo);
+                .replaceText(t -> t.matchLiteral("{filename}").replacement(latestLog.getName()))
+                .replaceText(t -> t.matchLiteral("{size}").replacement(fileSize))
+                .replaceText(t -> t.matchLiteral("{modified}").replacement(lastModified))
+                .replaceText(t -> t.matchLiteral("{path}").replacement(latestLog.getAbsolutePath())));
         logManager.logToFile("COMMAND", player.getName() + " viewed log file info: " + latestLog.getName(), null);
     }
 
@@ -168,8 +162,7 @@ public class CommandHandler implements CommandExecutor {
         if (sender.hasPermission(permission)) {
             return true;
         }
-        String noPerm = messageManager.getMessage("commands.no-permission", "&#FF6B6B✗ &cYou don't have permission to use this command!");
-        sender.sendMessage(noPerm);
+        plugin.adventure().sender(sender).sendMessage(messageManager.getMessage("commands.no-permission", "&#FF6B6B✗ &cYou don't have permission to use this command!"));
         return false;
     }
 }

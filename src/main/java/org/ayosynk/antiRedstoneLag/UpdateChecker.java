@@ -21,12 +21,12 @@ public class UpdateChecker implements Listener {
     private static final String SPIGOT_API_URL = "https://api.spigotmc.org/legacy/update.php?resource=";
     private static final String UPDATE_PERMISSION = "antiredstonelag.admin";
 
-    private final JavaPlugin plugin;
+    private final AntiRedstoneLag plugin;
     private final int resourceId;
     private String latestVersion;
     private boolean updateAvailable = false;
 
-    public UpdateChecker(JavaPlugin plugin, int resourceId) {
+    public UpdateChecker(AntiRedstoneLag plugin, int resourceId) {
         this.plugin = plugin;
         this.resourceId = resourceId;
     }
@@ -83,8 +83,9 @@ public class UpdateChecker implements Listener {
         // Delay message slightly so it appears after other join messages
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline()) {
-                player.sendMessage("§6[AntiRedstoneLag] §eA new version is available: §av" + latestVersion);
-                player.sendMessage("§6[AntiRedstoneLag] §7Download at: §bhttps://www.spigotmc.org/resources/" + resourceId);
+                net.kyori.adventure.text.minimessage.MiniMessage mm = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage();
+                plugin.adventure().player(player).sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <yellow>A new version is available: <green>v" + latestVersion));
+                plugin.adventure().player(player).sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <gray>Download at: <aqua>https://www.spigotmc.org/resources/" + resourceId));
             }
         }, 40L); // 2 second delay
     }

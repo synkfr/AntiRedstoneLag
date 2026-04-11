@@ -19,9 +19,11 @@ public class AntiRedstoneLag extends JavaPlugin {
     @SuppressWarnings("unused") // Kept for bStats integration
     private MetricsManager metricsManager;
     private UpdateChecker updateChecker;
+    private net.kyori.adventure.platform.bukkit.BukkitAudiences aventura;
 
-    // SpigotMC resource ID for update checking (replace with actual ID when published)
-    private static final int SPIGOT_RESOURCE_ID = 0; // TODO: Set actual resource ID
+    // SpigotMC resource ID for update checking (replace with actual ID when
+    // published)
+    private static final int SPIGOT_RESOURCE_ID = 130753; // TODO: Set actual resource ID
 
     @Override
     public void onEnable() {
@@ -32,23 +34,27 @@ public class AntiRedstoneLag extends JavaPlugin {
         messageManager = new MessageManager(this);
         logManager = new LogManager(this);
         metricsManager = new MetricsManager(this);
+        aventura = net.kyori.adventure.platform.bukkit.BukkitAudiences.create(this);
 
-        counterManager = new CounterManager(configManager, messageManager, logManager, getDataFolder());
-        redstoneListener = new RedstoneListener(counterManager, configManager, messageManager, logManager);
+        counterManager = new CounterManager(this, configManager, messageManager, logManager, getDataFolder());
+        redstoneListener = new RedstoneListener(counterManager, configManager);
 
         getServer().getPluginManager().registerEvents(redstoneListener, this);
         int resetInterval = configManager.getResetInterval();
         getServer().getScheduler().runTaskTimer(this, counterManager::resetCounters, resetInterval, resetInterval);
 
         // Start cleanup task for old logs
-        getServer().getScheduler().runTaskTimerAsynchronously(this, logManager::cleanupOldLogs, TICKS_PER_HOUR, TICKS_PER_DAY);
+        getServer().getScheduler().runTaskTimerAsynchronously(this, logManager::cleanupOldLogs, TICKS_PER_HOUR,
+                TICKS_PER_DAY);
 
         getLogger().info("AntiRedstoneLag enabled!");
-        getCommand("arl").setExecutor(new CommandHandler(this, configManager, messageManager, logManager, counterManager));
+        getCommand("arl")
+                .setExecutor(new CommandHandler(this, configManager, messageManager, logManager, counterManager));
         getCommand("arl").setTabCompleter(new TabCompleteHandler());
 
         // Send enabled message
-        String enabledMsg = messageManager.getMessage("messages.enabled", "&#4ECDC4✓ &aAntiRedstoneLag v{version} has been enabled!")
+        String enabledMsg = messageManager
+                .getMessageString("messages.enabled", "&#4ECDC4✓ &aAntiRedstoneLag v{version} has been enabled!")
                 .replace("{version}", getDescription().getVersion());
         getLogger().info(net.md_5.bungee.api.ChatColor.stripColor(enabledMsg));
 
@@ -62,7 +68,8 @@ public class AntiRedstoneLag extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        String disabledMsg = messageManager.getMessage("messages.disabled", "&#FF6B6B✗ &cAntiRedstoneLag has been disabled!");
+        String disabledMsg = messageManager.getMessageString("messages.disabled",
+                "&#FF6B6B✗ &cAntiRedstoneLag has been disabled!");
         getLogger().info(net.md_5.bungee.api.ChatColor.stripColor(disabledMsg));
 
         // Save statistics before shutdown
@@ -73,6 +80,11 @@ public class AntiRedstoneLag extends JavaPlugin {
         if (logManager != null) {
             logManager.logToFile("PLUGIN_DISABLED", "Plugin disabled", null);
             logManager.close();
+        }
+
+        if (aventura != null) {
+            aventura.close();
+            aventura = null;
         }
     }
 
@@ -90,5 +102,9 @@ public class AntiRedstoneLag extends JavaPlugin {
 
     public CounterManager getCounterManager() {
         return counterManager;
+    }
+
+    public net.kyori.adventure.platform.bukkit.BukkitAudiences adventure() {
+        return aventura;
     }
 }

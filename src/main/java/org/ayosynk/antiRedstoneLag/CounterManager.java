@@ -21,6 +21,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
  * Tracks statistics and handles alerts when thresholds are exceeded.
  */
 public class CounterManager {
+    private final AntiRedstoneLag plugin;
     private static final long ALERT_COOLDOWN_MS = 1000; // 1 second cooldown between alerts
     private static final long WARNING_COOLDOWN_MS = 5000; // 5 second cooldown between warnings
     private static final long DAY_MS = 24 * 60 * 60 * 1000;
@@ -43,7 +44,8 @@ public class CounterManager {
     private final AtomicLong lastWarningTime = new AtomicLong(0);
     private long lastResetTime = System.currentTimeMillis();
 
-    public CounterManager(ConfigManager configManager, MessageManager messageManager, LogManager logManager, File dataFolder) {
+    public CounterManager(AntiRedstoneLag plugin, ConfigManager configManager, MessageManager messageManager, LogManager logManager, File dataFolder) {
+        this.plugin = plugin;
         this.configManager = configManager;
         this.messageManager = messageManager;
         this.logManager = logManager;
@@ -108,17 +110,6 @@ public class CounterManager {
         int threshold = configManager.getChunkThreshold();
         int percent = (currentCount * 100) / threshold;
 
-        String warningMessage = messageManager.getMessage("alerts.redstone-warning",
-                        "&#FFD93D⚠ &eWarning: &7Redstone activity at &e{x}, {y}, {z} &7is at &c{percent}% &7of threshold!")
-                .replace("{x}", String.valueOf(location.getBlockX()))
-                .replace("{y}", String.valueOf(location.getBlockY()))
-                .replace("{z}", String.valueOf(location.getBlockZ()))
-                .replace("{world}", location.getWorld().getName())
-                .replace("{material}", material.toString())
-                .replace("{percent}", String.valueOf(percent))
-                .replace("{current}", String.valueOf(currentCount))
-                .replace("{threshold}", String.valueOf(threshold));
-
         // Send to block owner if online
         if (ownerUuid != null) {
             Player owner = Bukkit.getPlayer(ownerUuid);
@@ -127,7 +118,16 @@ public class CounterManager {
                 Long lastWarned = warnedPlayers.get(ownerUuid.toString());
                 long now = System.currentTimeMillis();
                 if (lastWarned == null || now - lastWarned >= WARNING_COOLDOWN_MS) {
-                    owner.sendMessage(warningMessage);
+                    plugin.adventure().player(owner).sendMessage(messageManager.getMessage("alerts.redstone-warning",
+                                    "&#FFD93D⚠ &eWarning: &7Redstone activity at &e{x}, {y}, {z} &7is at &c{percent}% &7of threshold!")
+                            .replaceText(t -> t.matchLiteral("{x}").replacement(String.valueOf(location.getBlockX())))
+                            .replaceText(t -> t.matchLiteral("{y}").replacement(String.valueOf(location.getBlockY())))
+                            .replaceText(t -> t.matchLiteral("{z}").replacement(String.valueOf(location.getBlockZ())))
+                            .replaceText(t -> t.matchLiteral("{world}").replacement(location.getWorld().getName()))
+                            .replaceText(t -> t.matchLiteral("{material}").replacement(material.toString()))
+                            .replaceText(t -> t.matchLiteral("{percent}").replacement(String.valueOf(percent)))
+                            .replaceText(t -> t.matchLiteral("{current}").replacement(String.valueOf(currentCount)))
+                            .replaceText(t -> t.matchLiteral("{threshold}").replacement(String.valueOf(threshold))));
                     warnedPlayers.put(ownerUuid.toString(), now);
                 }
             }
@@ -197,30 +197,25 @@ public class CounterManager {
     private void sendAlert(Location location, Material material, int chunkCount, int blockCount) {
         if (location.getWorld() == null) return;
         
-        String alertMessage = messageManager.getMessage("alerts.redstone-removed")
-                .replace("{x}", String.valueOf(location.getBlockX()))
-                .replace("{y}", String.valueOf(location.getBlockY()))
-                .replace("{z}", String.valueOf(location.getBlockZ()))
-                .replace("{world}", location.getWorld().getName())
-                .replace("{material}", material.toString())
-                .replace("{chunk_count}", String.valueOf(chunkCount))
-                .replace("{block_count}", String.valueOf(blockCount));
-
-        // Split multi-line messages
-        String[] lines = alertMessage.split("\n");
+        net.kyori.adventure.text.Component alertComponent = messageManager.getMessage("alerts.redstone-removed")
+                .replaceText(t -> t.matchLiteral("{x}").replacement(String.valueOf(location.getBlockX())))
+                .replaceText(t -> t.matchLiteral("{y}").replacement(String.valueOf(location.getBlockY())))
+                .replaceText(t -> t.matchLiteral("{z}").replacement(String.valueOf(location.getBlockZ())))
+                .replaceText(t -> t.matchLiteral("{world}").replacement(location.getWorld().getName()))
+                .replaceText(t -> t.matchLiteral("{material}").replacement(material.toString()))
+                .replaceText(t -> t.matchLiteral("{chunk_count}").replacement(String.valueOf(chunkCount)))
+                .replaceText(t -> t.matchLiteral("{block_count}").replacement(String.valueOf(blockCount)));
 
         // Send to all players with permission
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (player.hasPermission("antiredstonelag.alerts")) {
-                player.sendMessage(lines);
+                plugin.adventure().player(player).sendMessage(alertComponent);
             }
         }
 
         // Also log to console if enabled
         if (configManager.isLogToConsole()) {
-            for (String line : lines) {
-                Bukkit.getConsoleSender().sendMessage(line);
-            }
+            plugin.adventure().console().sendMessage(alertComponent);
         }
     }
 
