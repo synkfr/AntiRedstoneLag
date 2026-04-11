@@ -1,22 +1,25 @@
 package org.ayosynk.antiRedstoneLag;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class MessageManager {
     private final JavaPlugin plugin;
-    private FileConfiguration messagesConfig;
     private File messagesFile;
-
-    // Hex color pattern
-    private final Pattern hexPattern = Pattern.compile("&#([A-Fa-f0-9]{6})");
+    private FileConfiguration messagesConfig;
+    private final MiniMessage miniMessage = MiniMessage.miniMessage();
+    private final LegacyComponentSerializer legacySerializer = LegacyComponentSerializer.builder()
+            .character('&')
+            .hexCharacter('#')
+            .extractUrls()
+            .build();
 
     public MessageManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -42,39 +45,43 @@ public class MessageManager {
         messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
     }
 
-    public String getMessage(String path) {
+    public Component getMessage(String path) {
         String message = messagesConfig.getString(path);
         if (message == null) {
             plugin.getLogger().warning("Message path '" + path + "' not found in messages.yml!");
-            return "Message not found: " + path;
+            return Component.text("Message not found: " + path);
         }
-        return translateHexColors(message);
+        return parseMessage(message);
     }
 
-    public String getMessage(String path, String defaultValue) {
+    public Component getMessage(String path, String defaultValue) {
         String message = messagesConfig.getString(path, defaultValue);
-        return translateHexColors(message);
+        return parseMessage(message);
     }
 
     /**
-     * Translates both traditional color codes and hex color codes in a string
+     * Legacy support: returns translated string for legacy Bukkit methods
      */
-    private String translateHexColors(String message) {
-        if (message == null) return null;
-
-        // Translate hex colors first
-        Matcher matcher = hexPattern.matcher(message);
-        StringBuffer buffer = new StringBuffer();
-
-        while (matcher.find()) {
-            String hex = matcher.group(1);
-            matcher.appendReplacement(buffer, net.md_5.bungee.api.ChatColor.of("#" + hex).toString());
-        }
-        matcher.appendTail(buffer);
-
-        // Then translate traditional color codes
-        return ChatColor.translateAlternateColorCodes('&', buffer.toString());
+    public String getMessageString(String path, String defaultValue) {
+        return legacySerializer.serialize(getMessage(path, defaultValue));
     }
+    
+    public String getMessageString(String path) {
+        return legacySerializer.serialize(getMessage(path));
+    }
+
+    private Component parseMessage(String message) {
+        if (message == null) return Component.empty();
+        
+        // Convert legacy &#RRGGBB to <color:#RRGGBB> for MiniMessage
+        // Also handle & color codes if they come from old config
+        if (message.contains("&") || message.contains("§")) {
+            return legacySerializer.deserialize(message.replace("&#", "#"));
+        }
+        
+        return miniMessage.deserialize(message);
+    }
+
 
     public boolean saveMessages() {
         try {
