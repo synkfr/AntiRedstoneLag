@@ -1,6 +1,11 @@
 package org.ayosynk.antiRedstoneLag;
 
 import org.bukkit.plugin.java.JavaPlugin;
+import org.ayosynk.antiRedstoneLag.command.*;
+import org.ayosynk.antiRedstoneLag.config.*;
+import org.ayosynk.antiRedstoneLag.listener.*;
+import org.ayosynk.antiRedstoneLag.manager.*;
+import org.ayosynk.antiRedstoneLag.scheduler.*;
 
 /**
  * Main plugin class for AntiRedstoneLag.

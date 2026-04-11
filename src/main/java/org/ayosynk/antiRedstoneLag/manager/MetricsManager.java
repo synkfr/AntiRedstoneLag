@@ -1,4 +1,4 @@
-package org.ayosynk.antiRedstoneLag;
+package org.ayosynk.antiRedstoneLag.manager;
 
 import org.bstats.bukkit.Metrics;
 import org.bstats.charts.SimplePie;

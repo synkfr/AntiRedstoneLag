@@ -1,4 +1,6 @@
-package org.ayosynk.antiRedstoneLag;
+package org.ayosynk.antiRedstoneLag.config;
+
+import org.ayosynk.antiRedstoneLag.AntiRedstoneLag;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;

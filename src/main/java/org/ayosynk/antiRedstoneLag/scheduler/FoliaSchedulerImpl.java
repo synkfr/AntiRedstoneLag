@@ -1,4 +1,4 @@
-package org.ayosynk.antiRedstoneLag;
+package org.ayosynk.antiRedstoneLag.scheduler;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;

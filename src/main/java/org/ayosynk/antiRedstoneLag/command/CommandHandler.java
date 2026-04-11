@@ -1,4 +1,11 @@
-package org.ayosynk.antiRedstoneLag;
+package org.ayosynk.antiRedstoneLag.command;
+
+import org.ayosynk.antiRedstoneLag.AntiRedstoneLag;
+import org.ayosynk.antiRedstoneLag.config.ConfigManager;
+import org.ayosynk.antiRedstoneLag.config.MessageManager;
+import org.ayosynk.antiRedstoneLag.manager.CounterManager;
+import org.ayosynk.antiRedstoneLag.manager.LogManager;
+import org.ayosynk.antiRedstoneLag.listener.RedstoneListener;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;

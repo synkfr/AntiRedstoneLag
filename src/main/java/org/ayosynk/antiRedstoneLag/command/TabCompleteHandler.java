@@ -1,4 +1,4 @@
-package org.ayosynk.antiRedstoneLag;
+package org.ayosynk.antiRedstoneLag.command;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;

@@ -1,4 +1,7 @@
-package org.ayosynk.antiRedstoneLag;
+package org.ayosynk.antiRedstoneLag.listener;
+
+import org.ayosynk.antiRedstoneLag.config.ConfigManager;
+import org.ayosynk.antiRedstoneLag.manager.CounterManager;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;

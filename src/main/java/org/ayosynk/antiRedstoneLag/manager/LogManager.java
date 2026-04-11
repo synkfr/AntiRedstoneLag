@@ -1,4 +1,6 @@
-package org.ayosynk.antiRedstoneLag;
+package org.ayosynk.antiRedstoneLag.manager;
+
+import org.ayosynk.antiRedstoneLag.AntiRedstoneLag;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
