@@ -43,6 +43,10 @@
               <pattern>it.unimi.dsi.fastutil</pattern>
               <shadedPattern>org.ayosynk.fastutil</shadedPattern>
             </relocation>
+            <relocation>
+              <pattern>net.kyori.adventure.platform</pattern>
+              <shadedPattern>org.ayosynk.adventure.platform</shadedPattern>
+            </relocation>
           </relocations>
           <minimizeJar>true</minimizeJar>
         </configuration>
@@ -51,8 +55,8 @@
   </build>
   <repositories>
     <repository>
-      <id>spigotmc-repo</id>
-      <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+      <id>papermc-repo</id>
+      <url>https://repo.papermc.io/repository/maven-public/</url>
     </repository>
     <repository>
       <id>sonatype</id>
@@ -61,9 +65,21 @@
   </repositories>
   <dependencies>
     <dependency>
-      <groupId>org.spigotmc</groupId>
-      <artifactId>spigot-api</artifactId>
-      <version>1.21.8-R0.1-SNAPSHOT</version>
+      <groupId>io.papermc.paper</groupId>
+      <artifactId>paper-api</artifactId>
+      <version>1.21.1-R0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.kyori</groupId>
+      <artifactId>adventure-api</artifactId>
+      <version>4.17.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.kyori</groupId>
+      <artifactId>adventure-text-minimessage</artifactId>
+      <version>4.17.0</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
