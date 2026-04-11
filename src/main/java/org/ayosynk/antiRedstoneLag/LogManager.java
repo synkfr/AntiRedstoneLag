@@ -15,7 +15,7 @@ public class LogManager {
     private static final long FLUSH_INTERVAL_MS = 500; // Flush at least every 500ms
 
     private final JavaPlugin plugin;
-    private final ConcurrentLinkedQueue<String> logQueue;
+    private final ConcurrentLinkedQueue<LogEntry> logQueue;
     private BufferedWriter logWriter;
     private final SimpleDateFormat dateFormat;
     private final SimpleDateFormat fileDateFormat;
@@ -27,7 +27,21 @@ public class LogManager {
     private volatile boolean running;
     private Thread logThread;
     private volatile long lastFlushTime;
-    private volatile int pendingWrites;
+        private volatile int pendingWrites;
+    
+        private static class LogEntry {
+            final long timestamp;
+            final String type;
+            final String message;
+            final String locationInfo;
+    
+            LogEntry(long timestamp, String type, String message, String locationInfo) {
+                this.timestamp = timestamp;
+                this.type = type;
+                this.message = message;
+                this.locationInfo = locationInfo;
+            }
+        }
 
     public LogManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -90,11 +104,20 @@ public class LogManager {
 
         try {
             while (!logQueue.isEmpty()) {
-                String logEntry = logQueue.poll();
-                if (logEntry != null) {
-                    logWriter.write(logEntry);
+                LogEntry entry = logQueue.poll();
+                if (entry != null) {
+                    String timestamp = dateFormat.format(new Date(entry.timestamp));
+                    String logLine = String.format("[%s] [%s] %s%s", 
+                        timestamp, entry.type, entry.message, 
+                        entry.locationInfo != null ? " | " + entry.locationInfo : "");
+                    
+                    logWriter.write(logLine);
                     logWriter.newLine();
                     pendingWrites++;
+                    
+                    if (consoleMirror) {
+                        plugin.getLogger().info(net.md_5.bungee.api.ChatColor.stripColor(logLine));
+                    }
                 }
             }
 
@@ -148,20 +171,15 @@ public class LogManager {
     public void logToFile(String type, String message, Location location) {
         if (!enabled) return;
 
-        String timestamp = dateFormat.format(new Date());
-        String logEntry = String.format("[%s] [%s] %s", timestamp, type, message);
-
+        String locationInfo = null;
         if (location != null) {
-            logEntry += String.format(" | Location: %s,%s,%s | World: %s | Chunk: %s,%s",
+            locationInfo = String.format("Location: %s,%s,%s | World: %s | Chunk: %s,%s",
                     location.getBlockX(), location.getBlockY(), location.getBlockZ(),
                     location.getWorld().getName(),
                     location.getChunk().getX(), location.getChunk().getZ());
         }
 
-        logQueue.offer(logEntry);
-        if (consoleMirror) {
-            plugin.getLogger().info(net.md_5.bungee.api.ChatColor.stripColor(logEntry));
-        }
+        logQueue.offer(new LogEntry(System.currentTimeMillis(), type, message, locationInfo));
     }
 
     public void logRedstoneRemoval(Location location, Material material, int chunkCount, int blockCount, String reason) {
