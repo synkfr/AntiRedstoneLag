@@ -22,12 +22,14 @@ public class UpdateChecker implements Listener {
     private static final String UPDATE_PERMISSION = "antiredstonelag.admin";
 
     private final AntiRedstoneLag plugin;
+    private final Scheduler scheduler;
     private final int resourceId;
     private String latestVersion;
     private boolean updateAvailable = false;
 
-    public UpdateChecker(AntiRedstoneLag plugin, int resourceId) {
+    public UpdateChecker(AntiRedstoneLag plugin, Scheduler scheduler, int resourceId) {
         this.plugin = plugin;
+        this.scheduler = scheduler;
         this.resourceId = resourceId;
     }
 
@@ -47,7 +49,7 @@ public class UpdateChecker implements Listener {
     }
 
     private void checkForUpdates(Consumer<String> callback) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        scheduler.runTaskAsynchronously(() -> {
             try {
                 URL url = new URL(SPIGOT_API_URL + resourceId);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -81,7 +83,7 @@ public class UpdateChecker implements Listener {
         if (!player.hasPermission(UPDATE_PERMISSION)) return;
 
         // Delay message slightly so it appears after other join messages
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        scheduler.runTaskLater(player, () -> {
             if (player.isOnline()) {
                 net.kyori.adventure.text.minimessage.MiniMessage mm = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage();
                 plugin.adventure().player(player).sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <yellow>A new version is available: <green>v" + latestVersion));

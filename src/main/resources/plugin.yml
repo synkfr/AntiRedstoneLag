@@ -5,6 +5,7 @@ api-version: '1.21'
 description: Premium redstone lag prevention system with advanced monitoring
 author: AyoSynk
 website: https://yourwebsite.com
+folia-supported: true
 depend: []
 softdepend: []
 commands:

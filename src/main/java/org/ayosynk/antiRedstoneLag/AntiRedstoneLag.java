@@ -20,6 +20,7 @@ public class AntiRedstoneLag extends JavaPlugin {
     private MetricsManager metricsManager;
     private UpdateChecker updateChecker;
     private net.kyori.adventure.platform.bukkit.BukkitAudiences aventura;
+    private Scheduler scheduler;
 
     // SpigotMC resource ID for update checking (replace with actual ID when
     // published)
@@ -36,16 +37,24 @@ public class AntiRedstoneLag extends JavaPlugin {
         metricsManager = new MetricsManager(this);
         aventura = net.kyori.adventure.platform.bukkit.BukkitAudiences.create(this);
 
+        // Platform-aware scheduler initialization
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionConfiguration");
+            scheduler = new FoliaSchedulerImpl(this);
+            getLogger().info("Detected Folia environment. Using regional schedulers.");
+        } catch (ClassNotFoundException e) {
+            scheduler = new BukkitSchedulerImpl(this);
+        }
+
         counterManager = new CounterManager(this, configManager, messageManager, logManager, getDataFolder());
         redstoneListener = new RedstoneListener(counterManager, configManager);
 
         getServer().getPluginManager().registerEvents(redstoneListener, this);
         int resetInterval = configManager.getResetInterval();
-        getServer().getScheduler().runTaskTimer(this, counterManager::resetCounters, resetInterval, resetInterval);
+        scheduler.runTaskTimer(counterManager::resetCounters, resetInterval, resetInterval);
 
         // Start cleanup task for old logs
-        getServer().getScheduler().runTaskTimerAsynchronously(this, logManager::cleanupOldLogs, TICKS_PER_HOUR,
-                TICKS_PER_DAY);
+        scheduler.runTaskTimerAsynchronously(logManager::cleanupOldLogs, TICKS_PER_HOUR, TICKS_PER_DAY);
 
         getLogger().info("AntiRedstoneLag enabled!");
         getCommand("arl")
@@ -60,7 +69,7 @@ public class AntiRedstoneLag extends JavaPlugin {
 
         // Check for updates (only if resource ID is set)
         if (SPIGOT_RESOURCE_ID > 0) {
-            updateChecker = new UpdateChecker(this, SPIGOT_RESOURCE_ID);
+            updateChecker = new UpdateChecker(this, scheduler, SPIGOT_RESOURCE_ID);
             getServer().getPluginManager().registerEvents(updateChecker, this);
             updateChecker.checkForUpdates();
         }
@@ -106,5 +115,9 @@ public class AntiRedstoneLag extends JavaPlugin {
 
     public net.kyori.adventure.platform.bukkit.BukkitAudiences adventure() {
         return aventura;
+    }
+
+    public Scheduler getScheduler() {
+        return scheduler;
     }
 }
