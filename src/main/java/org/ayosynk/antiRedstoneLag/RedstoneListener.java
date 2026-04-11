@@ -28,25 +28,18 @@ public class RedstoneListener implements Listener {
 
     private final CounterManager counterManager;
     private final ConfigManager configManager;
-    @SuppressWarnings("unused") // Reserved for future use
-    private final MessageManager messageManager;
-    @SuppressWarnings("unused") // Reserved for future use
-    private final LogManager logManager;
 
-    // Track who placed redstone blocks (block key -> player UUID)
-    private final Map<String, UUID> blockOwners = new ConcurrentHashMap<>();
+    // Track who placed redstone blocks (Chunk key -> Block key -> player UUID)
+    private final Map<String, Map<String, UUID>> blockOwners = new ConcurrentHashMap<>();
 
     // Cached config values for performance
     private volatile Set<Material> cachedRedstoneMaterials;
     private volatile Set<String> cachedEnabledWorlds;
     private volatile ConfigManager.RemovalAction cachedRemovalAction;
 
-    public RedstoneListener(CounterManager counterManager, ConfigManager configManager,
-                            MessageManager messageManager, LogManager logManager) {
+    public RedstoneListener(CounterManager counterManager, ConfigManager configManager) {
         this.counterManager = counterManager;
         this.configManager = configManager;
-        this.messageManager = messageManager;
-        this.logManager = logManager;
         refreshCache();
     }
 
@@ -67,8 +60,11 @@ public class RedstoneListener implements Listener {
         // Track redstone block placements using cached materials
         if (cachedRedstoneMaterials.contains(material)) {
             // Avoid creating Location object - use block coordinates directly
+            String chunkKey = getChunkKey(block.getWorld(), block.getX() >> 4, block.getZ() >> 4);
             String blockKey = getBlockKey(block.getWorld(), block.getX(), block.getY(), block.getZ());
-            blockOwners.put(blockKey, event.getPlayer().getUniqueId());
+            
+            blockOwners.computeIfAbsent(chunkKey, k -> new ConcurrentHashMap<>())
+                       .put(blockKey, event.getPlayer().getUniqueId());
         }
     }
 
@@ -95,15 +91,13 @@ public class RedstoneListener implements Listener {
         int blockZ = block.getZ();
         String blockKey = getBlockKey(world, blockX, blockY, blockZ);
 
+        // Use chunk key directly to avoid Location object creation
+        String chunkKey = getChunkKey(world, blockX >> 4, blockZ >> 4);
+
         // Check bypass permission for block owner
-        if (hasOwnerBypass(blockKey)) {
+        if (hasOwnerBypass(chunkKey, blockKey)) {
             return;
         }
-
-        Chunk chunk = block.getChunk();
-
-        // Use chunk key directly to avoid Location object creation
-        String chunkKey = getChunkKey(world, chunk.getX(), chunk.getZ());
 
         // Check whitelist mode - skip if chunk is not whitelisted
         if (!configManager.isChunkWhitelisted(chunkKey)) {
@@ -114,7 +108,8 @@ public class RedstoneListener implements Listener {
 
         // Check if we should warn the player (approaching threshold)
         if (counterManager.shouldWarn(chunkKey, blockKey)) {
-            UUID ownerUuid = blockOwners.get(blockKey);
+            Map<String, UUID> chunkOwners = blockOwners.get(chunkKey);
+            UUID ownerUuid = chunkOwners != null ? chunkOwners.get(blockKey) : null;
             if (ownerUuid != null) {
                 Location location = block.getLocation();
                 counterManager.sendWarning(location, material, ownerUuid);
@@ -126,7 +121,13 @@ public class RedstoneListener implements Listener {
             applyRemovalAction(block, material, event);
 
             // Clean up owner tracking
-            blockOwners.remove(blockKey);
+            Map<String, UUID> chunkOwners = blockOwners.get(chunkKey);
+            if (chunkOwners != null) {
+                chunkOwners.remove(blockKey);
+                if (chunkOwners.isEmpty()) {
+                    blockOwners.remove(chunkKey);
+                }
+            }
 
             // Handle removal (logging, alerts, etc.) - create Location only when needed
             Location location = block.getLocation();
@@ -150,8 +151,9 @@ public class RedstoneListener implements Listener {
         }
     }
 
-    private boolean hasOwnerBypass(String blockKey) {
-        UUID ownerUuid = blockOwners.get(blockKey);
+    private boolean hasOwnerBypass(String chunkKey, String blockKey) {
+        Map<String, UUID> chunkOwners = blockOwners.get(chunkKey);
+        UUID ownerUuid = chunkOwners != null ? chunkOwners.get(blockKey) : null;
 
         if (ownerUuid != null) {
             Player owner = Bukkit.getPlayer(ownerUuid);
@@ -170,16 +172,9 @@ public class RedstoneListener implements Listener {
         return world.getName() + ":" + chunkX + ":" + chunkZ;
     }
 
-    // Clean up tracking for unloaded chunks
+    // Clean up tracking for unloaded chunks - O(1) removal
     public void cleanupChunk(Chunk chunk) {
-        String prefix = chunk.getWorld().getName() + ":";
-        blockOwners.keySet().removeIf(key -> {
-            if (!key.startsWith(prefix)) return false;
-            String[] parts = key.split(":");
-            if (parts.length < 4) return false;
-            int x = Integer.parseInt(parts[1]) >> 4;
-            int z = Integer.parseInt(parts[3]) >> 4;
-            return x == chunk.getX() && z == chunk.getZ();
-        });
+        String chunkKey = getChunkKey(chunk.getWorld(), chunk.getX(), chunk.getZ());
+        blockOwners.remove(chunkKey);
     }
 }
