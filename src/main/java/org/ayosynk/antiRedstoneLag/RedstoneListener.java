@@ -136,17 +136,27 @@ public class RedstoneListener implements Listener {
     }
 
     private void applyRemovalAction(Block block, Material material, BlockRedstoneEvent event) {
+        // Prevent multiple applications for the same block in a single tick
+        if (block.getType() == Material.AIR) {
+            return;
+        }
+
         switch (cachedRemovalAction) {
             case REMOVE:
-                block.setType(Material.AIR, false);
+                // Set to AIR and apply physics to notify neighbors to stop updates
+                block.setType(Material.AIR, true);
                 break;
             case DISABLE:
                 // Cancel the redstone signal by setting current to 0
                 event.setNewCurrent(0);
                 break;
             case DROP:
-                // Break block and drop item
-                block.breakNaturally(new ItemStack(Material.AIR));
+                // Break block naturally and ensure physics updates
+                block.breakNaturally();
+                // Ensure it's gone and neighbors are notified even if breakNaturally was delayed
+                if (block.getType() != Material.AIR) {
+                    block.setType(Material.AIR, true);
+                }
                 break;
         }
     }
