@@ -15,7 +15,7 @@ public class FoliaSchedulerImpl implements Scheduler {
 
     @Override
     public void runTaskTimer(Runnable task, long delay, long period) {
-        Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, t -> task.run(), delay, period);
+        Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, t -> task.run(), Math.max(1, delay), period);
     }
 
     @Override
@@ -25,12 +25,12 @@ public class FoliaSchedulerImpl implements Scheduler {
 
     @Override
     public void runTaskTimerAsynchronously(Runnable task, long delay, long period) {
-        Bukkit.getAsyncScheduler().runAtFixedRate(plugin, t -> task.run(), delay * 50, period * 50, TimeUnit.MILLISECONDS);
+        Bukkit.getAsyncScheduler().runAtFixedRate(plugin, t -> task.run(), Math.max(50, delay * 50), period * 50, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void runTaskLater(Runnable task, long delay) {
-        Bukkit.getGlobalRegionScheduler().runDelayed(plugin, t -> task.run(), delay);
+        Bukkit.getGlobalRegionScheduler().runDelayed(plugin, t -> task.run(), Math.max(1, delay));
     }
 
     @Override

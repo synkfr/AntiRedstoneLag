@@ -5,13 +5,11 @@ import org.bstats.charts.SimplePie;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class MetricsManager {
-    private final JavaPlugin plugin;
-    private final int pluginId = 27839; // replace with your bStats plugin ID
+    private static final int PLUGIN_ID = 27839; // replace with your bStats plugin ID
 
     public MetricsManager(JavaPlugin plugin) {
-        this.plugin = plugin;
         try {
-            Metrics metrics = new Metrics(plugin, pluginId);
+            Metrics metrics = new Metrics(plugin, PLUGIN_ID);
             setupCustomCharts(metrics);
             plugin.getLogger().info("Metrics initialized successfully!");
         } catch (Exception e) {
