@@ -46,7 +46,7 @@ public class CounterManager {
     private final AtomicInteger removalsToday = new AtomicInteger(0);
     private final AtomicLong lastAlertTime = new AtomicLong(0);
     private final AtomicLong lastWarningTime = new AtomicLong(0);
-    private long lastResetTime = System.currentTimeMillis();
+    private volatile long lastResetTime = System.currentTimeMillis();
 
     public CounterManager(AntiRedstoneLag plugin, ConfigManager configManager, MessageManager messageManager, LogManager logManager, File dataFolder) {
         this.plugin = plugin;
@@ -157,6 +157,9 @@ public class CounterManager {
             chunkCounters.clear();
             blockCounters.clear();
         }
+
+        // Clear per-player warning cooldowns to prevent memory leak
+        warnedPlayers.clear();
 
         // Reset daily counter if it's a new day
         if (System.currentTimeMillis() - lastResetTime > DAY_MS) {
