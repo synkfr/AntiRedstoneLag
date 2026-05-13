@@ -16,6 +16,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockRedstoneEvent;
+import org.bukkit.event.world.ChunkUnloadEvent;
 
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +35,9 @@ public class RedstoneListener implements Listener {
 
     // Track who placed redstone blocks (Chunk key -> Block key -> player UUID)
     private final Map<String, Map<String, UUID>> blockOwners = new ConcurrentHashMap<>();
+
+    // Track blocks that have been disabled via the DISABLE action to short-circuit repeated events
+    private final Set<String> disabledBlocks = ConcurrentHashMap.newKeySet();
 
     // Cached config values for performance
     private volatile Set<Material> cachedRedstoneMaterials;
@@ -94,6 +98,12 @@ public class RedstoneListener implements Listener {
         int blockZ = block.getZ();
         String blockKey = getBlockKey(world, blockX, blockY, blockZ);
 
+        // Short-circuit if this block was already disabled by DISABLE action
+        if (disabledBlocks.contains(blockKey)) {
+            event.setNewCurrent(0);
+            return;
+        }
+
         // Use chunk key directly to avoid Location object creation
         String chunkKey = getChunkKey(world, blockX >> 4, blockZ >> 4);
 
@@ -150,8 +160,9 @@ public class RedstoneListener implements Listener {
                 block.setType(Material.AIR, true);
                 break;
             case DISABLE:
-                // Cancel the redstone signal by setting current to 0
+                // Cancel the redstone signal and track the block to prevent infinite re-checks
                 event.setNewCurrent(0);
+                disabledBlocks.add(getBlockKey(block.getWorld(), block.getX(), block.getY(), block.getZ()));
                 break;
             case DROP:
                 // Break block naturally and ensure physics updates
@@ -189,5 +200,19 @@ public class RedstoneListener implements Listener {
     public void cleanupChunk(Chunk chunk) {
         String chunkKey = getChunkKey(chunk.getWorld(), chunk.getX(), chunk.getZ());
         blockOwners.remove(chunkKey);
+        // Clean up disabled blocks in this chunk
+        disabledBlocks.removeIf(key -> key.startsWith(chunk.getWorld().getName() + ":" + chunk.getX() + ":") || key.startsWith(chunkKey));
+    }
+
+    @EventHandler
+    public void onChunkUnload(ChunkUnloadEvent event) {
+        cleanupChunk(event.getChunk());
+    }
+
+    /**
+     * Clear disabled blocks tracking. Called on counter reset to allow re-evaluation.
+     */
+    public void clearDisabledBlocks() {
+        disabledBlocks.clear();
     }
 }
