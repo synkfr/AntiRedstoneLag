@@ -7,6 +7,8 @@ import org.bukkit.Material;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -92,10 +94,14 @@ public class LogManager {
                     processLogQueue();
                     Thread.sleep(100); // Process every 100ms
                 } catch (InterruptedException e) {
+                    // On interrupt, drain the remaining queue before exiting
+                    processLogQueue();
                     Thread.currentThread().interrupt();
                     break;
                 }
             }
+            // Final drain to ensure nothing is lost
+            processLogQueue();
         }, "AntiRedstoneLag-Logger");
         logThread.setDaemon(true);
         logThread.start();
@@ -118,7 +124,7 @@ public class LogManager {
                     pendingWrites++;
                     
                     if (consoleMirror) {
-                        plugin.getLogger().info(net.md_5.bungee.api.ChatColor.stripColor(logLine));
+                        plugin.getLogger().info(logLine);
                     }
                 }
             }
@@ -159,7 +165,14 @@ public class LogManager {
             // Rename to rotated file
             String timestamp = new SimpleDateFormat("HH-mm-ss").format(new Date());
             File rotatedFile = new File(logsFolder, "redstone-logs-" + currentDate + "-" + timestamp + ".log");
-            currentLogFile.renameTo(rotatedFile);
+            try {
+                Files.move(currentLogFile.toPath(), rotatedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException moveEx) {
+                // Fallback to rename if move fails
+                if (!currentLogFile.renameTo(rotatedFile)) {
+                    plugin.getLogger().warning("Failed to rotate log file: " + currentLogFile.getName());
+                }
+            }
 
             // Create new log file
             currentLogFile.createNewFile();
@@ -175,10 +188,15 @@ public class LogManager {
 
         String locationInfo = null;
         if (location != null) {
-            locationInfo = String.format("Location: %s,%s,%s | World: %s | Chunk: %s,%s",
-                    location.getBlockX(), location.getBlockY(), location.getBlockZ(),
-                    location.getWorld().getName(),
-                    location.getChunk().getX(), location.getChunk().getZ());
+            if (location.getWorld() == null) {
+                locationInfo = String.format("Location: %s,%s,%s | World: unknown",
+                        location.getBlockX(), location.getBlockY(), location.getBlockZ());
+            } else {
+                locationInfo = String.format("Location: %s,%s,%s | World: %s | Chunk: %s,%s",
+                        location.getBlockX(), location.getBlockY(), location.getBlockZ(),
+                        location.getWorld().getName(),
+                        location.getChunk().getX(), location.getChunk().getZ());
+            }
         }
 
         logQueue.offer(new LogEntry(System.currentTimeMillis(), type, message, locationInfo));
