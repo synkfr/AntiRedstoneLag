@@ -1,5 +1,7 @@
 package org.ayosynk.antiRedstoneLag;
 
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.ayosynk.antiRedstoneLag.command.*;
 import org.ayosynk.antiRedstoneLag.config.*;
@@ -34,7 +36,6 @@ public class AntiRedstoneLag extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        saveResource("messages.yml", false);
 
         configManager = new ConfigManager(this);
         messageManager = new MessageManager(this);
@@ -56,21 +57,25 @@ public class AntiRedstoneLag extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(redstoneListener, this);
         int resetInterval = configManager.getResetInterval();
-        scheduler.runTaskTimer(counterManager::resetCounters, resetInterval, resetInterval);
+        scheduler.runTaskTimer(() -> {
+            counterManager.resetCounters();
+            redstoneListener.clearDisabledBlocks();
+        }, resetInterval, resetInterval);
 
         // Start cleanup task for old logs
         scheduler.runTaskTimerAsynchronously(logManager::cleanupOldLogs, TICKS_PER_HOUR, TICKS_PER_DAY);
 
         getLogger().info("AntiRedstoneLag enabled!");
-        getCommand("arl")
-                .setExecutor(new CommandHandler(this, configManager, messageManager, logManager, counterManager));
-        getCommand("arl").setTabCompleter(new TabCompleteHandler());
+        PluginCommand arlCommand = getCommand("arl");
+        if (arlCommand != null) {
+            arlCommand.setExecutor(new CommandHandler(this, configManager, messageManager, logManager, counterManager));
+            arlCommand.setTabCompleter(new TabCompleteHandler());
+        } else {
+            getLogger().severe("Command 'arl' not found in plugin.yml! Commands will not work.");
+        }
 
         // Send enabled message
-        String enabledMsg = messageManager
-                .getMessageString("messages.enabled", "&#4ECDC4✓ &aAntiRedstoneLag v{version} has been enabled!")
-                .replace("{version}", getDescription().getVersion());
-        getLogger().info(net.md_5.bungee.api.ChatColor.stripColor(enabledMsg));
+        getLogger().info("AntiRedstoneLag v" + getDescription().getVersion() + " has been enabled!");
 
         // Check for updates (only if resource ID is set)
         if (SPIGOT_RESOURCE_ID > 0) {
@@ -82,9 +87,7 @@ public class AntiRedstoneLag extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        String disabledMsg = messageManager.getMessageString("messages.disabled",
-                "&#FF6B6B✗ &cAntiRedstoneLag has been disabled!");
-        getLogger().info(net.md_5.bungee.api.ChatColor.stripColor(disabledMsg));
+        getLogger().info("AntiRedstoneLag has been disabled!");
 
         // Save statistics before shutdown
         if (counterManager != null) {
