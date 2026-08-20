@@ -26,7 +26,6 @@ public class AntiRedstoneLag extends JavaPlugin {
     @SuppressWarnings("unused") // Kept for bStats integration
     private MetricsManager metricsManager;
     private UpdateChecker updateChecker;
-    private net.kyori.adventure.platform.bukkit.BukkitAudiences aventura;
     private Scheduler scheduler;
 
     // SpigotMC resource ID for update checking (replace with actual ID when
@@ -41,7 +40,6 @@ public class AntiRedstoneLag extends JavaPlugin {
         messageManager = new MessageManager(this);
         logManager = new LogManager(this);
         metricsManager = new MetricsManager(this);
-        aventura = net.kyori.adventure.platform.bukkit.BukkitAudiences.create(this);
 
         // Platform-aware scheduler initialization
         try {
@@ -98,11 +96,6 @@ public class AntiRedstoneLag extends JavaPlugin {
             logManager.logToFile("PLUGIN_DISABLED", "Plugin disabled", null);
             logManager.close();
         }
-
-        if (aventura != null) {
-            aventura.close();
-            aventura = null;
-        }
     }
 
     public MessageManager getMessageManager() {
@@ -119,10 +112,6 @@ public class AntiRedstoneLag extends JavaPlugin {
 
     public CounterManager getCounterManager() {
         return counterManager;
-    }
-
-    public net.kyori.adventure.platform.bukkit.BukkitAudiences adventure() {
-        return aventura;
     }
 
     public Scheduler getScheduler() {

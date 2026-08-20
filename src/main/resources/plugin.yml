@@ -1,7 +1,7 @@
 name: AntiRedstoneLag
-version: '2.1.0'
+version: '2.2.0'
 main: org.ayosynk.antiRedstoneLag.AntiRedstoneLag
-api-version: '1.21'
+api-version: '26.2'
 description: Premium redstone lag prevention system with advanced monitoring
 author: AyoSynk
 website: https://yourwebsite.com
@@ -12,7 +12,7 @@ commands:
   arl:
     description: Main AntiRedstoneLag command
     permission: antiredstonelag.use
-    usage: /<command> [reload|stats|logs|help]
+    usage: /<command> [reload|stats|logs|hotspots|help]
 permissions:
   antiredstonelag.*:
     description: All AntiRedstoneLag permissions
@@ -24,6 +24,7 @@ permissions:
       antiredstonelag.logs: true
       antiredstonelag.alerts: true
       antiredstonelag.bypass: true
+      antiredstonelag.hotspots: true
   antiredstonelag.use:
     description: Use basic plugin commands
     default: true
@@ -42,3 +43,6 @@ permissions:
   antiredstonelag.bypass:
     description: Bypass redstone limits
     default: false
+  antiredstonelag.hotspots:
+    description: View and export redstone hotspot map
+    default: op

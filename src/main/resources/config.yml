@@ -17,7 +17,15 @@ debug: false
 # Options: REMOVE (set to air), DISABLE (cancel redstone signal), DROP (break and drop item)
 removal-action: REMOVE
 
+
+# Lockdown system (EMP) - Prevents players from repeatedly triggering lag machines
+lockdown:
+  enabled: true
+  # Duration in seconds to lock down the chunk when the threshold is exceeded
+  duration-seconds: 60
+
 # Warning system - warn players before removing their redstone
+
 warning:
   enabled: true
   # Percentage of threshold at which to warn (e.g., 80 = warn at 80% of threshold)

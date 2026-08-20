@@ -37,6 +37,11 @@ public class ConfigManager {
     private int warningThresholdPercent;
     private boolean whitelistEnabled;
     private Set<String> whitelistedChunks;
+    
+    // Lockdown
+    private boolean lockdownEnabled;
+    private int lockdownDurationSeconds;
+
     private Set<String> enabledWorlds;
     private Set<Material> redstoneMaterials;
 
@@ -72,7 +77,12 @@ public class ConfigManager {
 
         // Whitelist mode
         whitelistEnabled = config.getBoolean("whitelist.enabled", false);
-        whitelistedChunks = new HashSet<>(config.getStringList("whitelist.chunks"));
+        whitelistedChunks = new java.util.HashSet<>(config.getStringList("whitelist.chunks"));
+        
+        // Lockdown mode
+        lockdownEnabled = config.getBoolean("lockdown.enabled", true);
+        lockdownDurationSeconds = config.getInt("lockdown.duration-seconds", 60);
+
 
         if (debugMode) {
             plugin.getLogger().info("[DEBUG] Config loaded: chunk-threshold=" + chunkThreshold + ", block-threshold=" + blockThreshold);
@@ -167,6 +177,15 @@ public class ConfigManager {
     public boolean isWhitelistEnabled() {
         return whitelistEnabled;
     }
+
+    public boolean isLockdownEnabled() {
+        return lockdownEnabled;
+    }
+    
+    public int getLockdownDurationSeconds() {
+        return lockdownDurationSeconds;
+    }
+
 
     /**
      * Check if a chunk is whitelisted for monitoring.

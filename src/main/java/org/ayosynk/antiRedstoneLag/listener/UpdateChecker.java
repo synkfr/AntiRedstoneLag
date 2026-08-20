@@ -89,8 +89,8 @@ public class UpdateChecker implements Listener {
         scheduler.runTaskLater(player, () -> {
             if (player.isOnline()) {
                 net.kyori.adventure.text.minimessage.MiniMessage mm = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage();
-                plugin.adventure().player(player).sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <yellow>A new version is available: <green>v" + latestVersion));
-                plugin.adventure().player(player).sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <gray>Download at: <aqua>https://www.spigotmc.org/resources/" + resourceId));
+                player.sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <yellow>A new version is available: <green>v" + latestVersion));
+                player.sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <gray>Download at: <aqua>https://www.spigotmc.org/resources/" + resourceId));
             }
         }, 40L); // 2 second delay
     }

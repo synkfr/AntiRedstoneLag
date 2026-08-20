@@ -2,6 +2,9 @@
 # Supports & color codes and &#RRGGBB hex colors
 
 alerts:
+
+  chunk-lockdown-admin: "&#FF6B6B[!] &cChunk Lockdown Triggered! &7World: &e{world} &7Chunk: &e{chunkX}, {chunkZ} &7Duration: &e{duration}s"
+  chunk-lockdown-local: "&#FF6B6B[!] &cThe chunk you are standing in has been locked down for &e{duration}s &cdue to extreme redstone lag!"
   redstone-removed: |-
     &#FF6B6B┌─ &c⚠ Lag Machine Detected &7─┐
     &7│ &6Coordinates: &e{x}, {y}, {z} &7│
@@ -28,12 +31,13 @@ commands:
   logs-download: "&#4ECDC4✓ &aLog file has been prepared for download!"
   no-permission: "&#FF6B6B✗ &cYou don't have permission to use this command!"
   help: |-
-    &#FFD93D┌─ &6AntiRedstoneLag &7v{version} ──────┐
-    &6/arl reload &7- Reload configuration and messages
-    &6/arl stats &7- View plugin statistics
-    &6/arl logs &7- View or download logs
-    &6/arl help &7- Show this help message
-    &#FFD93D└────────────────────────────┘
+    &#FFD93D┌─ &6AntiRedstoneLag &7v{version} ──────────┐
+    &6/arl reload    &7- Reload configuration and messages
+    &6/arl stats     &7- View plugin statistics
+    &6/arl logs      &7- View or download logs
+    &6/arl hotspots  &7- View top redstone hotspots
+    &6/arl help      &7- Show this help message
+    &#FFD93D└──────────────────────────────────────┘
 
 messages:
   enabled: "&#4ECDC4✓ &aAntiRedstoneLag v{version} has been enabled!"

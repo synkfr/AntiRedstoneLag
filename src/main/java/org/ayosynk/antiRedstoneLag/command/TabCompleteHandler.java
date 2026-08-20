@@ -24,12 +24,31 @@ public class TabCompleteHandler implements TabCompleter {
             if ("logs".startsWith(partial) && sender.hasPermission("antiredstonelag.logs")) {
                 completions.add("logs");
             }
+            if ("hotspots".startsWith(partial) && sender.hasPermission("antiredstonelag.hotspots")) {
+                completions.add("hotspots");
+            }
             if ("help".startsWith(partial)) {
                 completions.add("help");
             }
-        } else if (args.length == 2 && args[0].equalsIgnoreCase("logs")) {
-            if ("download".startsWith(args[1].toLowerCase()) && sender.hasPermission("antiredstonelag.logs")) {
-                completions.add("download");
+
+        } else if (args.length == 2) {
+            String sub     = args[0].toLowerCase();
+            String partial = args[1].toLowerCase();
+
+            if (sub.equals("logs") && sender.hasPermission("antiredstonelag.logs")) {
+                if ("download".startsWith(partial)) {
+                    completions.add("download");
+                }
+            } else if (sub.equals("hotspots") && sender.hasPermission("antiredstonelag.hotspots")) {
+                // Suggest page numbers 1-5 and the export option
+                if ("export".startsWith(partial)) {
+                    completions.add("export");
+                }
+                for (int p = 1; p <= 5; p++) {
+                    if (String.valueOf(p).startsWith(partial)) {
+                        completions.add(String.valueOf(p));
+                    }
+                }
             }
         }
 
