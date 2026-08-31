@@ -2,6 +2,7 @@ package org.ayosynk.antiRedstoneLag;
 
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.ayosynk.antiRedstoneLag.command.CommandHandler;
 import org.ayosynk.antiRedstoneLag.config.ConfigManager;
@@ -44,10 +45,10 @@ public class AntiRedstoneLag extends JavaPlugin {
         snapshotManager = new SnapshotManager(this, configManager, messageManager);
 
         try {
-            Class.forName("io.papermc.paper.threadedregions.RegionConfiguration");
+            Bukkit.getGlobalRegionScheduler();
             scheduler = new FoliaSchedulerImpl(this);
-            getLogger().info("Detected Folia environment. Using regional schedulers.");
-        } catch (ClassNotFoundException e) {
+            getLogger().info("Using Paper/Folia regional scheduler.");
+        } catch (Throwable e) {
             scheduler = new BukkitSchedulerImpl(this);
         }
 

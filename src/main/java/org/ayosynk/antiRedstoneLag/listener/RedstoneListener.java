@@ -30,18 +30,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RedstoneListener implements Listener {
     private static final String BYPASS_PERMISSION = "antiredstonelag.bypass";
 
-    private static final boolean IS_FOLIA;
-    static {
-        boolean folia;
-        try {
-            Class.forName("io.papermc.paper.threadedregions.RegionConfiguration");
-            folia = true;
-        } catch (ClassNotFoundException ignored) {
-            folia = false;
-        }
-        IS_FOLIA = folia;
-    }
-
     private final CounterManager counterManager;
     private final ConfigManager configManager;
 
@@ -326,9 +314,9 @@ public class RedstoneListener implements Listener {
             }
         };
 
-        if (IS_FOLIA) {
+        try {
             Bukkit.getRegionScheduler().execute(counterManager.getPlugin(), loc, task);
-        } else {
+        } catch (Throwable t) {
             Bukkit.getScheduler().runTask(counterManager.getPlugin(), task);
         }
     }
@@ -350,9 +338,9 @@ public class RedstoneListener implements Listener {
             }
         };
 
-        if (IS_FOLIA) {
+        try {
             Bukkit.getRegionScheduler().execute(counterManager.getPlugin(), loc, task);
-        } else {
+        } catch (Throwable t) {
             Bukkit.getScheduler().runTask(counterManager.getPlugin(), task);
         }
     }
