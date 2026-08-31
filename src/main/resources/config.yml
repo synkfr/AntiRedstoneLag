@@ -38,15 +38,47 @@ clearlagg:
   # Broadcast display type: CHAT, ACTION_BAR, TITLE, SUBTITLE, ALL, NONE
   broadcast-mode: CHAT
   clear-ground-items: true
-  # Clear arrows, tridents, and projectiles stuck on the ground
-  clear-projectiles: true
-  # Clear hostile monsters without name tags
-  clear-unnamed-monsters: false
-  clear-xp-orbs: false
-  clear-boats-minecarts: false
-  exempt-named-mobs: true
-  exempt-tamed-animals: true
-  exempt-leashed-mobs: true
+  # Entities to remove during clear (supports conditions: onGround, !isMounted, !hasName, !isTamed, !isLeashed, liveTime>100)
+  remove-entities:
+    - "Arrow onGround"
+    - "Spectral_Arrow onGround"
+    - "Trident onGround"
+    - "Snowball"
+    - "Egg"
+    - "Ender_Pearl"
+    - "Experience_Bottle"
+    - "Fireball"
+    - "Small_Fireball"
+    - "Dragon_Fireball"
+    - "Wither_Skull"
+    - "Shulker_Bullet"
+    - "Boat !isMounted"
+    - "Chest_Boat !isMounted"
+    - "Minecart !isMounted"
+    - "Minecart_Chest !isMounted"
+    - "Minecart_Hopper !isMounted"
+    - "Minecart_Tnt"
+    - "Minecart_Furnace"
+    - "Tnt liveTime>100"
+  # Entities that are 100% immune from clearing (SMP safe)
+  entity-whitelist:
+    - "Player"
+    - "Villager"
+    - "Iron_Golem"
+    - "Allay"
+    - "Armor_Stand"
+    - "Item_Frame"
+    - "Glow_Item_Frame"
+    - "Painting"
+    - "Leash_Knot"
+    - "Interaction"
+    - "Text_Display"
+    - "Block_Display"
+    - "Item_Display"
+    - "* hasName"
+    - "* isTamed"
+    - "* isLeashed"
+    - "* isMounted"
   # Items that will NEVER be cleared when dropped on ground
   item-blacklist:
     - NETHER_STAR
@@ -66,20 +98,6 @@ clearlagg:
     - NETHERITE_CHESTPLATE
     - NETHERITE_LEGGINGS
     - NETHERITE_BOOTS
-  # Entities that are 100% immune from clearing (SMP safe)
-  entity-whitelist:
-    - VILLAGER
-    - IRON_GOLEM
-    - ALLAY
-    - ARMOR_STAND
-    - ITEM_FRAME
-    - GLOW_ITEM_FRAME
-    - PAINTING
-    - LEASH_KNOT
-    - INTERACTION
-    - TEXT_DISPLAY
-    - BLOCK_DISPLAY
-    - ITEM_DISPLAY
   # Emergency auto-clear when server TPS drops below this value (0.0 to disable)
   tps-emergency-threshold: 0.0
 

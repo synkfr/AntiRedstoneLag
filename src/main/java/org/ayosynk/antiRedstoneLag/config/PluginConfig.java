@@ -8,7 +8,6 @@ import eu.okaeri.configs.annotation.Names;
 import eu.okaeri.configs.annotation.NameStrategy;
 import eu.okaeri.configs.annotation.NameModifier;
 import org.bukkit.Material;
-import org.bukkit.entity.EntityType;
 
 import java.util.Arrays;
 import java.util.List;
@@ -168,28 +167,58 @@ public class PluginConfig extends OkaeriConfig {
         @CustomKey("clear-ground-items")
         private boolean clearGroundItems = true;
 
-        @CustomKey("clear-projectiles")
-        @Comment("Clear arrows, tridents, and projectiles stuck on the ground")
-        private boolean clearProjectiles = true;
+        @CustomKey("remove-entities")
+        @Comment({
+            "Entities to remove during clear (supports conditions: onGround, !isMounted, !hasName, !isTamed, !isLeashed, liveTime>100)",
+            "Examples: Arrow onGround, Boat !isMounted, Minecart !isMounted, Minecart_Tnt, Snowball, Egg"
+        })
+        private List<String> removeEntities = Arrays.asList(
+                "Arrow onGround",
+                "Spectral_Arrow onGround",
+                "Trident onGround",
+                "Snowball",
+                "Egg",
+                "Ender_Pearl",
+                "Experience_Bottle",
+                "Fireball",
+                "Small_Fireball",
+                "Dragon_Fireball",
+                "Wither_Skull",
+                "Shulker_Bullet",
+                "Boat !isMounted",
+                "Chest_Boat !isMounted",
+                "Minecart !isMounted",
+                "Minecart_Chest !isMounted",
+                "Minecart_Hopper !isMounted",
+                "Minecart_Tnt",
+                "Minecart_Furnace",
+                "Tnt liveTime>100"
+        );
 
-        @CustomKey("clear-unnamed-monsters")
-        @Comment("Clear hostile monsters without name tags")
-        private boolean clearUnnamedMonsters = false;
-
-        @CustomKey("clear-xp-orbs")
-        private boolean clearXpOrbs = false;
-
-        @CustomKey("clear-boats-minecarts")
-        private boolean clearBoatsMinecarts = false;
-
-        @CustomKey("exempt-named-mobs")
-        private boolean exemptNamedMobs = true;
-
-        @CustomKey("exempt-tamed-animals")
-        private boolean exemptTamedAnimals = true;
-
-        @CustomKey("exempt-leashed-mobs")
-        private boolean exemptLeashedMobs = true;
+        @CustomKey("entity-whitelist")
+        @Comment({
+            "Entities that are 100% immune from clearing (SMP safe)",
+            "Supports rules: Villager, Iron_Golem, Armor_Stand, Item_Frame, * hasName, * isTamed, * isLeashed, * isMounted"
+        })
+        private List<String> entityWhitelist = Arrays.asList(
+                "Player",
+                "Villager",
+                "Iron_Golem",
+                "Allay",
+                "Armor_Stand",
+                "Item_Frame",
+                "Glow_Item_Frame",
+                "Painting",
+                "Leash_Knot",
+                "Interaction",
+                "Text_Display",
+                "Block_Display",
+                "Item_Display",
+                "* hasName",
+                "* isTamed",
+                "* isLeashed",
+                "* isMounted"
+        );
 
         @CustomKey("item-blacklist")
         @Comment("Items that will NEVER be cleared when dropped on ground")
@@ -211,23 +240,6 @@ public class PluginConfig extends OkaeriConfig {
                 Material.NETHERITE_CHESTPLATE,
                 Material.NETHERITE_LEGGINGS,
                 Material.NETHERITE_BOOTS
-        );
-
-        @CustomKey("entity-whitelist")
-        @Comment("Entities that are 100% immune from clearing (SMP safe)")
-        private List<EntityType> entityWhitelist = Arrays.asList(
-                EntityType.VILLAGER,
-                EntityType.IRON_GOLEM,
-                EntityType.ALLAY,
-                EntityType.ARMOR_STAND,
-                EntityType.ITEM_FRAME,
-                EntityType.GLOW_ITEM_FRAME,
-                EntityType.PAINTING,
-                EntityType.LEASH_KNOT,
-                EntityType.INTERACTION,
-                EntityType.TEXT_DISPLAY,
-                EntityType.BLOCK_DISPLAY,
-                EntityType.ITEM_DISPLAY
         );
 
         @CustomKey("tps-emergency-threshold")
@@ -254,40 +266,16 @@ public class PluginConfig extends OkaeriConfig {
             return clearGroundItems;
         }
 
-        public boolean isClearProjectiles() {
-            return clearProjectiles;
+        public List<String> getRemoveEntities() {
+            return removeEntities;
         }
 
-        public boolean isClearUnnamedMonsters() {
-            return clearUnnamedMonsters;
-        }
-
-        public boolean isClearXpOrbs() {
-            return clearXpOrbs;
-        }
-
-        public boolean isClearBoatsMinecarts() {
-            return clearBoatsMinecarts;
-        }
-
-        public boolean isExemptNamedMobs() {
-            return exemptNamedMobs;
-        }
-
-        public boolean isExemptTamedAnimals() {
-            return exemptTamedAnimals;
-        }
-
-        public boolean isExemptLeashedMobs() {
-            return exemptLeashedMobs;
+        public List<String> getEntityWhitelist() {
+            return entityWhitelist;
         }
 
         public List<Material> getItemBlacklist() {
             return itemBlacklist;
-        }
-
-        public List<EntityType> getEntityWhitelist() {
-            return entityWhitelist;
         }
 
         public double getTpsEmergencyThreshold() {

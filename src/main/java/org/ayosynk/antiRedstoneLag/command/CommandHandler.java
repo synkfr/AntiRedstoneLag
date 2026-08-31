@@ -533,6 +533,10 @@ public class CommandHandler implements BasicCommand {
         configManager.reloadConfig();
         messageManager.reloadMessages();
 
+        if (plugin.getClearLaggManager() != null) {
+            plugin.getClearLaggManager().reloadRules();
+        }
+
         RedstoneListener listener = plugin.getRedstoneListener();
         if (listener != null) {
             listener.refreshCache();

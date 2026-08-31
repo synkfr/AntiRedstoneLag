@@ -9,22 +9,16 @@ import org.ayosynk.antiRedstoneLag.config.PluginConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.entity.Item;
-import org.bukkit.entity.ItemFrame;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Monster;
-import org.bukkit.entity.Painting;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
-import org.bukkit.entity.Tameable;
 import org.bukkit.entity.Vehicle;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -61,11 +55,32 @@ public class ClearLaggManager {
     private final AtomicInteger secondsUntilClear = new AtomicInteger(300);
     private volatile boolean timerRunning = false;
 
+    private volatile List<EntityFilterRule> cachedWhitelistRules = new ArrayList<>();
+    private volatile List<EntityFilterRule> cachedRemoveRules = new ArrayList<>();
+
     public ClearLaggManager(AntiRedstoneLag plugin, ConfigManager configManager, MessageManager messageManager) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.messageManager = messageManager;
+        reloadRules();
         startAutoClearTask();
+    }
+
+    public void reloadRules() {
+        PluginConfig.ClearLaggConfig cfg = configManager.getPluginConfig().getClearlagg();
+        List<EntityFilterRule> wList = new ArrayList<>();
+        for (String ruleStr : cfg.getEntityWhitelist()) {
+            EntityFilterRule r = EntityFilterRule.parse(ruleStr);
+            if (r != null) wList.add(r);
+        }
+        this.cachedWhitelistRules = wList;
+
+        List<EntityFilterRule> rList = new ArrayList<>();
+        for (String ruleStr : cfg.getRemoveEntities()) {
+            EntityFilterRule r = EntityFilterRule.parse(ruleStr);
+            if (r != null) rList.add(r);
+        }
+        this.cachedRemoveRules = rList;
     }
 
     public void startAutoClearTask() {
@@ -152,13 +167,14 @@ public class ClearLaggManager {
     public int clearEntities(ClearType type) {
         PluginConfig.ClearLaggConfig cfg = configManager.getPluginConfig().getClearlagg();
         Set<Material> itemBlacklist = new HashSet<>(cfg.getItemBlacklist());
-        Set<EntityType> entityWhitelist = new HashSet<>(cfg.getEntityWhitelist());
+        List<EntityFilterRule> whitelist = cachedWhitelistRules;
+        List<EntityFilterRule> removeRules = cachedRemoveRules;
 
         AtomicInteger count = new AtomicInteger(0);
 
         for (World world : Bukkit.getWorlds()) {
             for (Entity entity : world.getEntities()) {
-                if (shouldRemove(entity, type, cfg, itemBlacklist, entityWhitelist)) {
+                if (shouldRemove(entity, type, cfg, itemBlacklist, whitelist, removeRules)) {
                     removeEntitySafely(entity);
                     count.incrementAndGet();
                 }
@@ -209,10 +225,15 @@ public class ClearLaggManager {
     }
 
     private boolean shouldRemove(Entity entity, ClearType type, PluginConfig.ClearLaggConfig cfg,
-                                 Set<Material> itemBlacklist, Set<EntityType> entityWhitelist) {
+                                 Set<Material> itemBlacklist, List<EntityFilterRule> whitelist,
+                                 List<EntityFilterRule> removeRules) {
         if (entity instanceof Player) return false;
-        if (entityWhitelist.contains(entity.getType())) return false;
-        if (entity instanceof ArmorStand || entity instanceof ItemFrame || entity instanceof Painting) return false;
+
+        for (EntityFilterRule wRule : whitelist) {
+            if (wRule.matches(entity)) {
+                return false;
+            }
+        }
 
         if (entity instanceof Item item) {
             if (type == ClearType.MOBS || type == ClearType.PROJECTILES || type == ClearType.XP || type == ClearType.VEHICLES) return false;
@@ -223,47 +244,23 @@ public class ClearLaggManager {
             return false;
         }
 
-        if (entity instanceof Projectile) {
-            if (type == ClearType.ITEMS || type == ClearType.MOBS || type == ClearType.XP || type == ClearType.VEHICLES) return false;
-            if (type == ClearType.PROJECTILES || type == ClearType.ALL || (type == ClearType.AUTO && cfg.isClearProjectiles())) {
-                if (entity instanceof AbstractArrow arrow) {
-                    return arrow.isInBlock();
+        if (type == ClearType.AUTO || type == ClearType.ALL) {
+            for (EntityFilterRule rRule : removeRules) {
+                if (rRule.matches(entity)) {
+                    return true;
                 }
-                return true;
             }
-            return false;
-        }
-
-        if (entity instanceof Monster) {
-            if (type == ClearType.ITEMS || type == ClearType.PROJECTILES || type == ClearType.XP || type == ClearType.VEHICLES) return false;
-            if (type == ClearType.MOBS || type == ClearType.ALL || (type == ClearType.AUTO && cfg.isClearUnnamedMonsters())) {
-                return isMobEligible((LivingEntity) entity, cfg);
-            }
-            return false;
-        }
-
-        if (entity instanceof ExperienceOrb) {
-            if (type == ClearType.XP || type == ClearType.ALL || (type == ClearType.AUTO && cfg.isClearXpOrbs())) {
-                return true;
-            }
-            return false;
-        }
-
-        if (entity instanceof Vehicle) {
-            if (type == ClearType.VEHICLES || type == ClearType.ALL || (type == ClearType.AUTO && cfg.isClearBoatsMinecarts())) {
-                return entity.getPassengers().isEmpty();
-            }
-            return false;
+        } else if (type == ClearType.MOBS && entity instanceof Monster) {
+            return true;
+        } else if (type == ClearType.PROJECTILES && entity instanceof Projectile) {
+            return true;
+        } else if (type == ClearType.XP && entity instanceof ExperienceOrb) {
+            return true;
+        } else if (type == ClearType.VEHICLES && entity instanceof Vehicle) {
+            return entity.getPassengers().isEmpty();
         }
 
         return false;
-    }
-
-    private boolean isMobEligible(LivingEntity mob, PluginConfig.ClearLaggConfig cfg) {
-        if (cfg.isExemptNamedMobs() && mob.customName() != null) return false;
-        if (cfg.isExemptLeashedMobs() && mob.isLeashed()) return false;
-        if (cfg.isExemptTamedAnimals() && mob instanceof Tameable tameable && tameable.isTamed()) return false;
-        return true;
     }
 
     private void removeEntitySafely(Entity entity) {
