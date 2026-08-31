@@ -1,37 +1,37 @@
 package org.ayosynk.antiRedstoneLag;
 
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.command.PluginCommand;
+import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.ayosynk.antiRedstoneLag.command.*;
-import org.ayosynk.antiRedstoneLag.config.*;
-import org.ayosynk.antiRedstoneLag.listener.*;
-import org.ayosynk.antiRedstoneLag.manager.*;
-import org.ayosynk.antiRedstoneLag.scheduler.*;
+import org.ayosynk.antiRedstoneLag.command.CommandHandler;
+import org.ayosynk.antiRedstoneLag.config.ConfigManager;
+import org.ayosynk.antiRedstoneLag.config.MessageManager;
+import org.ayosynk.antiRedstoneLag.listener.RedstoneListener;
+import org.ayosynk.antiRedstoneLag.listener.UpdateChecker;
+import org.ayosynk.antiRedstoneLag.manager.CounterManager;
+import org.ayosynk.antiRedstoneLag.manager.LogManager;
+import org.ayosynk.antiRedstoneLag.manager.MetricsManager;
+import org.ayosynk.antiRedstoneLag.scheduler.BukkitSchedulerImpl;
+import org.ayosynk.antiRedstoneLag.scheduler.FoliaSchedulerImpl;
+import org.ayosynk.antiRedstoneLag.scheduler.Scheduler;
 
-/**
- * Main plugin class for AntiRedstoneLag.
- * Manages initialization, shutdown, and provides access to managers.
- */
+import java.util.List;
+
 public class AntiRedstoneLag extends JavaPlugin {
-    // Time constants
     private static final long TICKS_PER_HOUR = 20L * 60 * 60;
     private static final long TICKS_PER_DAY = TICKS_PER_HOUR * 24;
+    private static final String MODRINTH_PROJECT_ID = "5UOt11Yc";
+    private static final String MODRINTH_PROJECT_URL = "https://modrinth.com/plugin/antiredstonelag";
 
     private CounterManager counterManager;
     private RedstoneListener redstoneListener;
     private MessageManager messageManager;
     private LogManager logManager;
     private ConfigManager configManager;
-    @SuppressWarnings("unused") // Kept for bStats integration
+    @SuppressWarnings("unused")
     private MetricsManager metricsManager;
     private UpdateChecker updateChecker;
-    private net.kyori.adventure.platform.bukkit.BukkitAudiences aventura;
     private Scheduler scheduler;
-
-    // SpigotMC resource ID for update checking (replace with actual ID when
-    // published)
-    private static final int SPIGOT_RESOURCE_ID = 130753; // TODO: Set actual resource ID
 
     @Override
     public void onEnable() {
@@ -41,9 +41,7 @@ public class AntiRedstoneLag extends JavaPlugin {
         messageManager = new MessageManager(this);
         logManager = new LogManager(this);
         metricsManager = new MetricsManager(this);
-        aventura = net.kyori.adventure.platform.bukkit.BukkitAudiences.create(this);
 
-        // Platform-aware scheduler initialization
         try {
             Class.forName("io.papermc.paper.threadedregions.RegionConfiguration");
             scheduler = new FoliaSchedulerImpl(this);
@@ -52,7 +50,7 @@ public class AntiRedstoneLag extends JavaPlugin {
             scheduler = new BukkitSchedulerImpl(this);
         }
 
-        counterManager = new CounterManager(this, configManager, messageManager, logManager, getDataFolder());
+        counterManager = new CounterManager(configManager, messageManager, logManager, getDataFolder());
         redstoneListener = new RedstoneListener(counterManager, configManager);
 
         getServer().getPluginManager().registerEvents(redstoneListener, this);
@@ -62,34 +60,29 @@ public class AntiRedstoneLag extends JavaPlugin {
             redstoneListener.clearDisabledBlocks();
         }, resetInterval, resetInterval);
 
-        // Start cleanup task for old logs
         scheduler.runTaskTimerAsynchronously(logManager::cleanupOldLogs, TICKS_PER_HOUR, TICKS_PER_DAY);
 
-        getLogger().info("AntiRedstoneLag enabled!");
-        PluginCommand arlCommand = getCommand("arl");
-        if (arlCommand != null) {
-            arlCommand.setExecutor(new CommandHandler(this, configManager, messageManager, logManager, counterManager));
-            arlCommand.setTabCompleter(new TabCompleteHandler());
-        } else {
-            getLogger().severe("Command 'arl' not found in plugin.yml! Commands will not work.");
-        }
+        this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            final Commands commands = event.registrar();
+            commands.register(
+                "arl",
+                "Main AntiRedstoneLag command",
+                List.of(),
+                new CommandHandler(this, configManager, messageManager, logManager, counterManager)
+            );
+        });
 
-        // Send enabled message
-        getLogger().info("AntiRedstoneLag v" + getDescription().getVersion() + " has been enabled!");
+        getLogger().info("AntiRedstoneLag v" + getPluginMeta().getVersion() + " has been enabled!");
 
-        // Check for updates (only if resource ID is set)
-        if (SPIGOT_RESOURCE_ID > 0) {
-            updateChecker = new UpdateChecker(this, scheduler, SPIGOT_RESOURCE_ID);
-            getServer().getPluginManager().registerEvents(updateChecker, this);
-            updateChecker.checkForUpdates();
-        }
+        updateChecker = new UpdateChecker(this, scheduler, MODRINTH_PROJECT_ID, MODRINTH_PROJECT_URL);
+        getServer().getPluginManager().registerEvents(updateChecker, this);
+        updateChecker.checkForUpdates();
     }
 
     @Override
     public void onDisable() {
         getLogger().info("AntiRedstoneLag has been disabled!");
 
-        // Save statistics before shutdown
         if (counterManager != null) {
             counterManager.saveStats();
         }
@@ -97,11 +90,6 @@ public class AntiRedstoneLag extends JavaPlugin {
         if (logManager != null) {
             logManager.logToFile("PLUGIN_DISABLED", "Plugin disabled", null);
             logManager.close();
-        }
-
-        if (aventura != null) {
-            aventura.close();
-            aventura = null;
         }
     }
 
@@ -119,10 +107,6 @@ public class AntiRedstoneLag extends JavaPlugin {
 
     public CounterManager getCounterManager() {
         return counterManager;
-    }
-
-    public net.kyori.adventure.platform.bukkit.BukkitAudiences adventure() {
-        return aventura;
     }
 
     public Scheduler getScheduler() {

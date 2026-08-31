@@ -1,52 +1,50 @@
 package org.ayosynk.antiRedstoneLag.listener;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.ayosynk.antiRedstoneLag.AntiRedstoneLag;
 import org.ayosynk.antiRedstoneLag.scheduler.Scheduler;
-
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 
-/**
- * Checks for plugin updates from SpigotMC.
- * Notifies admins when a new version is available.
- */
 public class UpdateChecker implements Listener {
-    private static final String SPIGOT_API_URL = "https://api.spigotmc.org/legacy/update.php?resource=";
+    private static final String MODRINTH_API_URL = "https://api.modrinth.com/v2/project/";
     private static final String UPDATE_PERMISSION = "antiredstonelag.admin";
 
     private final AntiRedstoneLag plugin;
     private final Scheduler scheduler;
-    private final int resourceId;
+    private final String projectId;
+    private final String projectUrl;
     private String latestVersion;
     private boolean updateAvailable = false;
 
-    public UpdateChecker(AntiRedstoneLag plugin, Scheduler scheduler, int resourceId) {
+    public UpdateChecker(AntiRedstoneLag plugin, Scheduler scheduler, String projectId, String projectUrl) {
         this.plugin = plugin;
         this.scheduler = scheduler;
-        this.resourceId = resourceId;
+        this.projectId = projectId;
+        this.projectUrl = projectUrl;
     }
 
-    /**
-     * Check for updates asynchronously.
-     */
     public void checkForUpdates() {
         checkForUpdates(version -> {
-            String currentVersion = plugin.getDescription().getVersion();
+            String currentVersion = plugin.getPluginMeta().getVersion();
             if (!currentVersion.equalsIgnoreCase(version)) {
                 latestVersion = version;
                 updateAvailable = true;
                 plugin.getLogger().info("A new version is available: v" + version + " (current: v" + currentVersion + ")");
-                plugin.getLogger().info("Download at: https://www.spigotmc.org/resources/" + resourceId);
+                plugin.getLogger().info("Download at: " + projectUrl);
             }
         });
     }
@@ -54,20 +52,29 @@ public class UpdateChecker implements Listener {
     private void checkForUpdates(Consumer<String> callback) {
         scheduler.runTaskAsynchronously(() -> {
             try {
-                URL url = new URL(SPIGOT_API_URL + resourceId);
+                URL url = URI.create(MODRINTH_API_URL + projectId + "/version").toURL();
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setConnectTimeout(5000);
                 connection.setReadTimeout(5000);
                 connection.setRequestMethod("GET");
+                connection.setRequestProperty("User-Agent", "AyoSynk/AntiRedstoneLag/" + plugin.getPluginMeta().getVersion());
+                connection.setRequestProperty("Accept", "application/json");
 
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
-                    String version = reader.readLine();
-                    if (version != null && !version.isEmpty()) {
-                        callback.accept(version);
+                if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+                        JsonArray versions = JsonParser.parseReader(reader).getAsJsonArray();
+                        if (!versions.isEmpty()) {
+                            JsonObject latest = versions.get(0).getAsJsonObject();
+                            if (latest.has("version_number")) {
+                                String version = latest.get("version_number").getAsString();
+                                if (version != null && !version.isEmpty()) {
+                                    callback.accept(version);
+                                }
+                            }
+                        }
                     }
                 }
             } catch (Exception e) {
-                // Silently fail - update check is not critical
                 if (plugin.getConfig().getBoolean("debug", false)) {
                     plugin.getLogger().warning("Failed to check for updates: " + e.getMessage());
                 }
@@ -75,9 +82,6 @@ public class UpdateChecker implements Listener {
         });
     }
 
-    /**
-     * Notify player about available update on join.
-     */
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         if (!updateAvailable) return;
@@ -85,14 +89,13 @@ public class UpdateChecker implements Listener {
         Player player = event.getPlayer();
         if (!player.hasPermission(UPDATE_PERMISSION)) return;
 
-        // Delay message slightly so it appears after other join messages
         scheduler.runTaskLater(player, () -> {
             if (player.isOnline()) {
-                net.kyori.adventure.text.minimessage.MiniMessage mm = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage();
-                plugin.adventure().player(player).sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <yellow>A new version is available: <green>v" + latestVersion));
-                plugin.adventure().player(player).sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <gray>Download at: <aqua>https://www.spigotmc.org/resources/" + resourceId));
+                MiniMessage mm = MiniMessage.miniMessage();
+                player.sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <yellow>A new version is available: <green>v" + latestVersion));
+                player.sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <gray>Download at: <aqua><click:open_url:'" + projectUrl + "'>" + projectUrl + "</click>"));
             }
-        }, 40L); // 2 second delay
+        }, 40L);
     }
 
     public boolean isUpdateAvailable() {
