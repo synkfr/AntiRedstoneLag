@@ -13,10 +13,14 @@ import org.ayosynk.antiRedstoneLag.listener.RedstoneListener;
 import org.ayosynk.antiRedstoneLag.manager.CounterManager;
 import org.ayosynk.antiRedstoneLag.manager.CounterManager.HotspotGroup;
 import org.ayosynk.antiRedstoneLag.manager.LogManager;
+import org.ayosynk.antiRedstoneLag.manager.SnapshotManager;
+import org.ayosynk.antiRedstoneLag.manager.SnapshotManager.Snapshot;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Particle;
+import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
@@ -55,7 +59,7 @@ public class CommandHandler implements BasicCommand {
         this.messageManager = messageManager;
         this.logManager = logManager;
         this.counterManager = counterManager;
-        this.tabCompleteHandler = new TabCompleteHandler();
+        this.tabCompleteHandler = new TabCompleteHandler(plugin);
         startInspectorTask();
     }
 
@@ -120,6 +124,10 @@ public class CommandHandler implements BasicCommand {
                 if (!hasPermission(sender, "antiredstonelag.inspect")) return;
                 inspectCommand(sender, args);
                 break;
+            case "snapshot":
+                if (!hasPermission(sender, "antiredstonelag.snapshot")) return;
+                snapshotCommand(sender, args);
+                break;
             case "help":
             default:
                 showHelp(sender);
@@ -140,6 +148,113 @@ public class CommandHandler implements BasicCommand {
     @Override
     public @Nullable String permission() {
         return "antiredstonelag.use";
+    }
+
+    private void snapshotCommand(CommandSender sender, String[] args) {
+        SnapshotManager sm = plugin.getSnapshotManager();
+        if (sm == null) return;
+
+        if (args.length == 1 || (args.length == 2 && args[1].equalsIgnoreCase("list"))) {
+            listSnapshots(sender);
+            return;
+        }
+
+        String sub = args[1].toLowerCase();
+        if (sub.equals("clear")) {
+            sm.clearSnapshots();
+            sender.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getSnapshotCleared()));
+            return;
+        }
+
+        if (sub.equals("view") && args.length > 2) {
+            viewSnapshot(sender, args[2]);
+            return;
+        }
+
+        if (sub.equals("tp") && args.length > 2) {
+            tpSnapshot(sender, args[2]);
+            return;
+        }
+
+        viewSnapshot(sender, args[1]);
+    }
+
+    private void listSnapshots(CommandSender sender) {
+        SnapshotManager sm = plugin.getSnapshotManager();
+        List<Snapshot> snapshots = sm.getSnapshots();
+
+        if (snapshots.isEmpty()) {
+            sender.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getSnapshotEmpty()));
+            return;
+        }
+
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+        sender.sendMessage(MM.deserialize("<gold>━━━ <yellow>📸 Forensic Lag Snapshots</yellow> <dark_gray>(" + snapshots.size() + ")</dark_gray> <gold>━━━"));
+
+        for (Snapshot snap : snapshots) {
+            String timeStr = sdf.format(new Date(snap.timestamp));
+            Component row = MM.deserialize(
+                    "<gold>[" + snap.id + "]</gold> <gray>" + timeStr + "</gray> <dark_gray>•</dark_gray> " +
+                    "<white>" + snap.worldName + "</white> <aqua>[" + snap.x + ", " + snap.y + ", " + snap.z + "]</aqua> " +
+                    "<red>" + snap.triggerMaterial.name() + "</red> <gray>(Culprit: <yellow>" + snap.culpritName + "</yellow>)</gray> "
+            )
+            .append(MM.deserialize("<green>[<click:run_command:'/arl snapshot view " + snap.id + "'>View</click>]</green> "))
+            .append(MM.deserialize("<aqua>[<click:run_command:'/arl snapshot tp " + snap.id + "'>TP</click>]</aqua>"));
+
+            sender.sendMessage(row);
+        }
+    }
+
+    private void viewSnapshot(CommandSender sender, String id) {
+        SnapshotManager sm = plugin.getSnapshotManager();
+        Snapshot snap = sm.getSnapshot(id);
+
+        if (snap == null) {
+            sender.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getSnapshotNotFound())
+                    .replaceText(t -> t.matchLiteral("{id}").replacement(id)));
+            return;
+        }
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        sender.sendMessage(MM.deserialize("<gold>━━━ <yellow>📸 Forensic Report: " + snap.id + "</yellow> <gold>━━━"));
+        sender.sendMessage(MM.deserialize("<gray>Captured At: <white>" + sdf.format(new Date(snap.timestamp)) + "</white>"));
+        sender.sendMessage(MM.deserialize("<gray>Location: <aqua>" + snap.x + ", " + snap.y + ", " + snap.z + "</aqua> in <white>" + snap.worldName + "</white>"));
+        sender.sendMessage(MM.deserialize("<gray>Culprit: <yellow>" + snap.culpritName + "</yellow> <dark_gray>(" + (snap.culpritUuid != null ? snap.culpritUuid : "N/A") + ")</dark_gray>"));
+        sender.sendMessage(MM.deserialize("<gray>Trigger: <red>" + snap.triggerMaterial.name() + "</red> <dark_gray>•</dark_gray> Updates: <aqua>" + snap.chunkUpdates + " chunk / " + snap.blockUpdates + " block</aqua>"));
+        sender.sendMessage(MM.deserialize("<gray>Total Redstone Components in Cluster: <green>" + snap.getTotalComponents() + "</green>"));
+        sender.sendMessage(MM.deserialize("<yellow>Component Breakdown:</yellow>"));
+
+        for (Map.Entry<Material, Integer> entry : snap.componentCounts.entrySet()) {
+            sender.sendMessage(MM.deserialize("  <dark_gray>•</dark_gray> <gray>" + entry.getKey().name() + ": <white>" + entry.getValue() + "</white>"));
+        }
+
+        sender.sendMessage(MM.deserialize("<gold>[<click:run_command:'/arl snapshot tp " + snap.id + "'>⚡ Click here to Teleport to Snapshot Site</click>]</gold>"));
+    }
+
+    private void tpSnapshot(CommandSender sender, String id) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(MM.deserialize("<red>Only players can teleport to snapshot coordinates.</red>"));
+            return;
+        }
+
+        SnapshotManager sm = plugin.getSnapshotManager();
+        Snapshot snap = sm.getSnapshot(id);
+
+        if (snap == null) {
+            sender.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getSnapshotNotFound())
+                    .replaceText(t -> t.matchLiteral("{id}").replacement(id)));
+            return;
+        }
+
+        World world = Bukkit.getWorld(snap.worldName);
+        if (world == null) {
+            player.sendMessage(MM.deserialize("<red>World '" + snap.worldName + "' is not currently loaded.</red>"));
+            return;
+        }
+
+        Location loc = new Location(world, snap.x + 0.5, snap.y + 1, snap.z + 0.5);
+        player.teleportAsync(loc);
+        player.sendMessage(MM.deserialize("<green>✓ Teleported to snapshot <yellow>" + snap.id + "</yellow> at <aqua>" + snap.x + ", " + snap.y + ", " + snap.z + "</aqua> in world <white>" + snap.worldName + "</white>."));
     }
 
     private void inspectCommand(CommandSender sender, String[] args) {

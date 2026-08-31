@@ -11,6 +11,7 @@ import org.ayosynk.antiRedstoneLag.listener.UpdateChecker;
 import org.ayosynk.antiRedstoneLag.manager.CounterManager;
 import org.ayosynk.antiRedstoneLag.manager.LogManager;
 import org.ayosynk.antiRedstoneLag.manager.MetricsManager;
+import org.ayosynk.antiRedstoneLag.manager.SnapshotManager;
 import org.ayosynk.antiRedstoneLag.scheduler.BukkitSchedulerImpl;
 import org.ayosynk.antiRedstoneLag.scheduler.FoliaSchedulerImpl;
 import org.ayosynk.antiRedstoneLag.scheduler.Scheduler;
@@ -27,6 +28,7 @@ public class AntiRedstoneLag extends JavaPlugin {
     private RedstoneListener redstoneListener;
     private MessageManager messageManager;
     private LogManager logManager;
+    private SnapshotManager snapshotManager;
     private ConfigManager configManager;
     @SuppressWarnings("unused")
     private MetricsManager metricsManager;
@@ -39,6 +41,7 @@ public class AntiRedstoneLag extends JavaPlugin {
         messageManager = new MessageManager(this);
         logManager = new LogManager(this);
         metricsManager = new MetricsManager(this);
+        snapshotManager = new SnapshotManager(this, configManager, messageManager);
 
         try {
             Class.forName("io.papermc.paper.threadedregions.RegionConfiguration");
@@ -106,6 +109,10 @@ public class AntiRedstoneLag extends JavaPlugin {
 
     public LogManager getLogManager() {
         return logManager;
+    }
+
+    public SnapshotManager getSnapshotManager() {
+        return snapshotManager;
     }
 
     public RedstoneListener getRedstoneListener() {

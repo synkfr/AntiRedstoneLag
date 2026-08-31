@@ -20,6 +20,7 @@ permissions:
       antiredstonelag.bypass: true
       antiredstonelag.hotspots: true
       antiredstonelag.inspect: true
+      antiredstonelag.snapshot: true
       antiredstonelag.admin: true
   antiredstonelag.use:
     description: Use basic plugin commands
@@ -44,6 +45,9 @@ permissions:
     default: op
   antiredstonelag.inspect:
     description: Toggle live redstone inspector particles
+    default: op
+  antiredstonelag.snapshot:
+    description: View and manage forensic lag snapshots
     default: op
   antiredstonelag.admin:
     description: Receive update notifications

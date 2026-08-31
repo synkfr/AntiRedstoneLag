@@ -127,6 +127,12 @@ public class RedstoneListener implements Listener {
         } else if (result == CounterManager.EVENT_FREEZE) {
             event.setNewCurrent(0);
             UUID ownerUuid = getOwner(worldId, chunkKey, blockKey);
+            if (counterManager.getPlugin().getSnapshotManager() != null) {
+                int cUps = counterManager.getChunkUpdates(worldId, chunkKey);
+                int bUps = counterManager.getBlockUpdates(worldId, blockKey);
+                counterManager.getPlugin().getSnapshotManager().takeSnapshot(
+                        block, material, cUps, bUps, ownerUuid, "Clock throttled/frozen");
+            }
             if (ownerUuid != null) {
                 Player owner = Bukkit.getPlayer(ownerUuid);
                 if (owner != null && owner.isOnline()) {
@@ -140,6 +146,14 @@ public class RedstoneListener implements Listener {
                 }
             }
         } else if (result == CounterManager.EVENT_DISABLE) {
+            UUID ownerUuid = getOwner(worldId, chunkKey, blockKey);
+            if (counterManager.getPlugin().getSnapshotManager() != null) {
+                int cUps = counterManager.getChunkUpdates(worldId, chunkKey);
+                int bUps = counterManager.getBlockUpdates(worldId, blockKey);
+                counterManager.getPlugin().getSnapshotManager().takeSnapshot(
+                        block, material, cUps, bUps, ownerUuid, "Exceeded threshold / Lag machine");
+            }
+
             if (configManager.isLockdownEnabled()) {
                 int duration = configManager.getLockdownDurationSeconds();
                 if (counterManager.lockdownChunk(worldId, chunkKey, duration)) {
@@ -210,6 +224,13 @@ public class RedstoneListener implements Listener {
             event.setCancelled(true);
         } else if (result == CounterManager.EVENT_DISABLE) {
             event.setCancelled(true);
+            UUID ownerUuid = getOwner(worldId, chunkKey, blockKey);
+            if (counterManager.getPlugin().getSnapshotManager() != null) {
+                int cUps = counterManager.getChunkUpdates(worldId, chunkKey);
+                int bUps = counterManager.getBlockUpdates(worldId, blockKey);
+                counterManager.getPlugin().getSnapshotManager().takeSnapshot(
+                        block, block.getType(), cUps, bUps, ownerUuid, "Piston 0-tick spam");
+            }
             if (configManager.isLockdownEnabled()) {
                 int duration = configManager.getLockdownDurationSeconds();
                 if (counterManager.lockdownChunk(worldId, chunkKey, duration)) {
@@ -269,6 +290,12 @@ public class RedstoneListener implements Listener {
                 }
             }
         });
+    }
+
+    public UUID getBlockOwner(UUID worldId, int x, int y, int z) {
+        long chunkKey = CounterManager.packChunk(x >> 4, z >> 4);
+        long blockKey = CounterManager.packBlock(x, y, z);
+        return getOwner(worldId, chunkKey, blockKey);
     }
 
     private UUID getOwner(UUID worldId, long chunkKey, long blockKey) {

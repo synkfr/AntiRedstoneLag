@@ -123,8 +123,17 @@ public class MessagesConfig extends OkaeriConfig {
         @CustomKey("inspect-disabled")
         private String inspectDisabled = "&#FF6B6B✗ &cReal-time redstone inspector disabled.";
 
-        @CustomKey("inspect-actionbar")
-        private String inspectActionbar = "<gold>ARL Inspect <dark_gray>| <yellow>Chunk: <aqua>{chunk_ups} UPS <dark_gray>| <yellow>Top Block: <red>{block_ups} UPS <gray>({material})";
+        @CustomKey("snapshot-captured")
+        private String snapshotCaptured = "&#FF6B6B[ARL Snapshot] &cCaptured forensic snapshot &e{id}&c for &6{material}&c at &e{x}, {y}, {z}&c! &7(Culprit: &e{culprit}&7)";
+
+        @CustomKey("snapshot-empty")
+        private String snapshotEmpty = "&#4ECDC4✓ &aNo forensic snapshots recorded yet.";
+
+        @CustomKey("snapshot-cleared")
+        private String snapshotCleared = "&#4ECDC4✓ &aAll forensic snapshots cleared.";
+
+        @CustomKey("snapshot-not-found")
+        private String snapshotNotFound = "&#FF6B6B✗ &cSnapshot not found: &e{id}";
 
         @CustomKey("no-permission")
         private String noPermission = "&#FF6B6B✗ &cYou don't have permission to use this command!";
@@ -135,7 +144,8 @@ public class MessagesConfig extends OkaeriConfig {
                 "&6/arl stats     &7- View plugin statistics\n" +
                 "&6/arl logs      &7- View or download logs\n" +
                 "&6/arl hotspots  &7- View top redstone hotspots\n" +
-                "&6/arl inspect   &7- Toggle real-time redstone HUD & particles\n" +
+                "&6/arl inspect   &7- Toggle real-time redstone HUD\n" +
+                "&6/arl snapshot  &7- View forensic lag snapshots\n" +
                 "&6/arl help      &7- Show this help message\n" +
                 "&#FFD93D└──────────────────────────────────────┘";
 
@@ -187,8 +197,20 @@ public class MessagesConfig extends OkaeriConfig {
             return inspectDisabled;
         }
 
-        public String getInspectActionbar() {
-            return inspectActionbar;
+        public String getSnapshotCaptured() {
+            return snapshotCaptured;
+        }
+
+        public String getSnapshotEmpty() {
+            return snapshotEmpty;
+        }
+
+        public String getSnapshotCleared() {
+            return snapshotCleared;
+        }
+
+        public String getSnapshotNotFound() {
+            return snapshotNotFound;
         }
 
         public String getNoPermission() {

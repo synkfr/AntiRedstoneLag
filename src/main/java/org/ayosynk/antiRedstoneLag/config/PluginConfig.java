@@ -53,6 +53,10 @@ public class PluginConfig extends OkaeriConfig {
     })
     private RemovalAction removalAction = RemovalAction.FREEZE;
 
+    @CustomKey("snapshot")
+    @Comment("Forensic snapshot system - records 3D structure and culprit metadata when lag machines are detected")
+    private SnapshotConfig snapshot = new SnapshotConfig();
+
     @CustomKey("freeze")
     @Comment("Non-destructive freezing system - temporarily pauses clocks before escalating")
     private FreezeConfig freeze = new FreezeConfig();
@@ -130,6 +134,36 @@ public class PluginConfig extends OkaeriConfig {
             Material.CALIBRATED_SCULK_SENSOR,
             Material.CHISELED_BOOKSHELF
     );
+
+    public static class SnapshotConfig extends OkaeriConfig {
+        @CustomKey("enabled")
+        private boolean enabled = true;
+
+        @CustomKey("radius")
+        private int radius = 3;
+
+        @CustomKey("max-snapshots")
+        private int maxSnapshots = 25;
+
+        @CustomKey("save-to-disk")
+        private boolean saveToDisk = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public int getRadius() {
+            return Math.max(1, Math.min(10, radius));
+        }
+
+        public int getMaxSnapshots() {
+            return Math.max(5, maxSnapshots);
+        }
+
+        public boolean isSaveToDisk() {
+            return saveToDisk;
+        }
+    }
 
     public static class FreezeConfig extends OkaeriConfig {
         @CustomKey("enabled")
@@ -348,6 +382,10 @@ public class PluginConfig extends OkaeriConfig {
 
     public RemovalAction getRemovalAction() {
         return removalAction != null ? removalAction : RemovalAction.FREEZE;
+    }
+
+    public SnapshotConfig getSnapshot() {
+        return snapshot;
     }
 
     public FreezeConfig getFreeze() {
