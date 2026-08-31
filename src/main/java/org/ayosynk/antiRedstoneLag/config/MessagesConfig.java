@@ -24,6 +24,12 @@ public class MessagesConfig extends OkaeriConfig {
     private MessagesSection messages = new MessagesSection();
 
     public static class AlertsSection extends OkaeriConfig {
+        @CustomKey("chunk-lockdown-admin")
+        private String chunkLockdownAdmin = "&#FF6B6B[!] &cChunk Lockdown Triggered! &7World: &e{world} &7Chunk: &e{chunkX}, {chunkZ} &7Duration: &e{duration}s";
+
+        @CustomKey("chunk-lockdown-local")
+        private String chunkLockdownLocal = "&#FF6B6B[!] &cThe chunk you are standing in has been locked down for &e{duration}s &cdue to extreme redstone lag!";
+
         @CustomKey("redstone-removed")
         private String redstoneRemoved = "&#FF6B6B┌─ &c⚠ Lag Machine Detected &7─┐\n" +
                 "&7│ &6Coordinates: &e{x}, {y}, {z} &7│\n" +
@@ -34,6 +40,14 @@ public class MessagesConfig extends OkaeriConfig {
 
         @CustomKey("redstone-warning")
         private String redstoneWarning = "&#FFD93D⚠ &eWarning: &7Redstone activity at &e{x}, {y}, {z} &7is at &c{percent}% &7of threshold!";
+
+        public String getChunkLockdownAdmin() {
+            return chunkLockdownAdmin;
+        }
+
+        public String getChunkLockdownLocal() {
+            return chunkLockdownLocal;
+        }
 
         public String getRedstoneRemoved() {
             return redstoneRemoved;
@@ -80,16 +94,26 @@ public class MessagesConfig extends OkaeriConfig {
                 "&7Path: &e{path}\n" +
                 "&#4ECDC4└────────────────────┘";
 
+        @CustomKey("hotspots-header")
+        private String hotspotsHeader = "&#4ECDC4┌─ &bRedstone Hotspots &7({count} clusters) ───┐";
+
+        @CustomKey("hotspots-none")
+        private String hotspotsNone = "&#4ECDC4✓ &aNo active redstone hotspots detected!";
+
+        @CustomKey("hotspots-exported")
+        private String hotspotsExported = "&#4ECDC4✓ &aHotspot map exported to: &e{path}";
+
         @CustomKey("no-permission")
         private String noPermission = "&#FF6B6B✗ &cYou don't have permission to use this command!";
 
         @CustomKey("help")
-        private String help = "&#FFD93D┌─ &6AntiRedstoneLag &7v{version} ──────┐\n" +
-                "&6/arl reload &7- Reload configuration and messages\n" +
-                "&6/arl stats &7- View plugin statistics\n" +
-                "&6/arl logs &7- View or download logs\n" +
-                "&6/arl help &7- Show this help message\n" +
-                "&#FFD93D└────────────────────────────┘";
+        private String help = "&#FFD93D┌─ &6AntiRedstoneLag &7v{version} ──────────┐\n" +
+                "&6/arl reload    &7- Reload configuration and messages\n" +
+                "&6/arl stats     &7- View plugin statistics\n" +
+                "&6/arl logs      &7- View or download logs\n" +
+                "&6/arl hotspots  &7- View top redstone hotspots\n" +
+                "&6/arl help      &7- Show this help message\n" +
+                "&#FFD93D└──────────────────────────────────────┘";
 
         public String getReloadSuccess() {
             return reloadSuccess;
@@ -117,6 +141,18 @@ public class MessagesConfig extends OkaeriConfig {
 
         public String getLogsFileInfo() {
             return logsFileInfo;
+        }
+
+        public String getHotspotsHeader() {
+            return hotspotsHeader;
+        }
+
+        public String getHotspotsNone() {
+            return hotspotsNone;
+        }
+
+        public String getHotspotsExported() {
+            return hotspotsExported;
         }
 
         public String getNoPermission() {

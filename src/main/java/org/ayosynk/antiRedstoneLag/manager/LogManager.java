@@ -9,20 +9,29 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
 public class LogManager {
-    private static final int BATCH_SIZE = 50; // Flush after this many entries
-    private static final long FLUSH_INTERVAL_MS = 500; // Flush at least every 500ms
+    private static final int BATCH_SIZE = 50;
+    private static final long FLUSH_INTERVAL_MS = 500;
+    private static final int ROTATION_CHECK_INTERVAL = 20;
+
+    private static final DateTimeFormatter LOG_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
+
+    private static final DateTimeFormatter FILE_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
+
+    private static final DateTimeFormatter ROTATE_FORMATTER =
+            DateTimeFormatter.ofPattern("HH-mm-ss").withZone(ZoneId.systemDefault());
 
     private final JavaPlugin plugin;
     private final ConcurrentLinkedQueue<LogEntry> logQueue;
     private BufferedWriter logWriter;
-    private final SimpleDateFormat dateFormat;
-    private final SimpleDateFormat fileDateFormat;
     private boolean enabled;
     private boolean consoleMirror;
     private int maxLogFiles;
@@ -31,38 +40,44 @@ public class LogManager {
     private volatile boolean running;
     private Thread logThread;
     private volatile long lastFlushTime;
-        private volatile int pendingWrites;
-    
-        private static class LogEntry {
-            final long timestamp;
-            final String type;
-            final String message;
-            final String locationInfo;
-    
-            LogEntry(long timestamp, String type, String message, String locationInfo) {
-                this.timestamp = timestamp;
-                this.type = type;
-                this.message = message;
-                this.locationInfo = locationInfo;
-            }
+    private volatile int pendingWrites;
+    private int flushCount = 0;
+
+    private static class LogEntry {
+        final long timestamp;
+        final String type;
+        final String message;
+        final String locationInfo;
+
+        LogEntry(long timestamp, String type, String message, String locationInfo) {
+            this.timestamp = timestamp;
+            this.type = type;
+            this.message = message;
+            this.locationInfo = locationInfo;
         }
+    }
 
     public LogManager(JavaPlugin plugin) {
         this.plugin = plugin;
         this.logQueue = new ConcurrentLinkedQueue<>();
-        this.dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        this.fileDateFormat = new SimpleDateFormat("yyyy-MM-dd");
         this.running = true;
-
         setupLogging();
         startLogThread();
     }
 
     private void setupLogging() {
-        enabled = plugin.getConfig().getBoolean("logging.enabled", true);
-        consoleMirror = plugin.getConfig().getBoolean("logging.console-mirror", false);
-        maxLogFiles = plugin.getConfig().getInt("logging.max-files", 10);
-        maxLogSize = plugin.getConfig().getLong("logging.max-size-mb", 10) * 1024 * 1024;
+        if (plugin instanceof AntiRedstoneLag arl && arl.getConfigManager() != null) {
+            var logging = arl.getConfigManager().getPluginConfig().getLogging();
+            enabled = logging.isEnabled();
+            consoleMirror = logging.isConsoleMirror();
+            maxLogFiles = logging.getMaxFiles();
+            maxLogSize = logging.getMaxSizeMb() * 1024 * 1024;
+        } else {
+            enabled = true;
+            consoleMirror = false;
+            maxLogFiles = 10;
+            maxLogSize = 10 * 1024 * 1024;
+        }
 
         if (!enabled) return;
 
@@ -72,16 +87,13 @@ public class LogManager {
         }
 
         try {
-            String currentDate = fileDateFormat.format(new Date());
+            String currentDate = FILE_FORMATTER.format(Instant.now());
             File logFile = new File(logsFolder, "redstone-logs-" + currentDate + ".log");
-
             if (!logFile.exists()) {
                 logFile.createNewFile();
             }
-
             logWriter = new BufferedWriter(new FileWriter(logFile, true));
             logToFile("SYSTEM", "Logging system initialized", null);
-
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to initialize log file!", e);
         }
@@ -92,15 +104,13 @@ public class LogManager {
             while (running || !logQueue.isEmpty()) {
                 try {
                     processLogQueue();
-                    Thread.sleep(100); // Process every 100ms
+                    Thread.sleep(100);
                 } catch (InterruptedException e) {
-                    // On interrupt, drain the remaining queue before exiting
                     processLogQueue();
                     Thread.currentThread().interrupt();
                     break;
                 }
             }
-            // Final drain to ensure nothing is lost
             processLogQueue();
         }, "AntiRedstoneLag-Logger");
         logThread.setDaemon(true);
@@ -109,35 +119,35 @@ public class LogManager {
 
     private void processLogQueue() {
         if (logWriter == null) return;
-
         try {
             while (!logQueue.isEmpty()) {
                 LogEntry entry = logQueue.poll();
                 if (entry != null) {
-                    String timestamp = dateFormat.format(new Date(entry.timestamp));
-                    String logLine = String.format("[%s] [%s] %s%s", 
-                        timestamp, entry.type, entry.message, 
-                        entry.locationInfo != null ? " | " + entry.locationInfo : "");
-                    
+                    String timestamp = LOG_FORMATTER.format(Instant.ofEpochMilli(entry.timestamp));
+                    String logLine = String.format("[%s] [%s] %s%s",
+                            timestamp, entry.type, entry.message,
+                            entry.locationInfo != null ? " | " + entry.locationInfo : "");
                     logWriter.write(logLine);
                     logWriter.newLine();
                     pendingWrites++;
-                    
+
                     if (consoleMirror) {
                         plugin.getLogger().info(logLine);
                     }
                 }
             }
 
-            // Batch flush: only flush if we have enough entries or enough time has passed
             long now = System.currentTimeMillis();
-            if (pendingWrites >= BATCH_SIZE || (pendingWrites > 0 && now - lastFlushTime >= FLUSH_INTERVAL_MS)) {
+            if (pendingWrites >= BATCH_SIZE ||
+                    (pendingWrites > 0 && now - lastFlushTime >= FLUSH_INTERVAL_MS)) {
                 logWriter.flush();
                 pendingWrites = 0;
                 lastFlushTime = now;
 
-                // Check log rotation on flush
-                checkLogRotation();
+                if (++flushCount >= ROTATION_CHECK_INTERVAL) {
+                    flushCount = 0;
+                    checkLogRotation();
+                }
             }
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to write to log file!", e);
@@ -146,35 +156,28 @@ public class LogManager {
 
     private void checkLogRotation() {
         if (logsFolder == null) return;
-
-        String currentDate = fileDateFormat.format(new Date());
-        File currentLogFile = new File(logsFolder, "redstone-logs-" + currentDate + ".log");
-
-        if (currentLogFile.exists() && currentLogFile.length() > maxLogSize) {
-            rotateLogFile(currentLogFile, currentDate);
+        String currentDate = FILE_FORMATTER.format(Instant.now());
+        File currentLog = new File(logsFolder, "redstone-logs-" + currentDate + ".log");
+        if (currentLog.exists() && currentLog.length() > maxLogSize) {
+            rotateLogFile(currentLog, currentDate);
         }
     }
 
     private void rotateLogFile(File currentLogFile, String currentDate) {
         try {
-            // Close current writer
             if (logWriter != null) {
                 logWriter.close();
             }
-
-            // Rename to rotated file
-            String timestamp = new SimpleDateFormat("HH-mm-ss").format(new Date());
-            File rotatedFile = new File(logsFolder, "redstone-logs-" + currentDate + "-" + timestamp + ".log");
+            String rotateTimestamp = ROTATE_FORMATTER.format(Instant.now());
+            File rotatedFile = new File(logsFolder,
+                    "redstone-logs-" + currentDate + "-" + rotateTimestamp + ".log");
             try {
                 Files.move(currentLogFile.toPath(), rotatedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException moveEx) {
-                // Fallback to rename if move fails
                 if (!currentLogFile.renameTo(rotatedFile)) {
                     plugin.getLogger().warning("Failed to rotate log file: " + currentLogFile.getName());
                 }
             }
-
-            // Create new log file
             currentLogFile.createNewFile();
             logWriter = new BufferedWriter(new FileWriter(currentLogFile, true));
             logToFile("SYSTEM", "Log file rotated due to size limit", null);
@@ -185,7 +188,6 @@ public class LogManager {
 
     public void logToFile(String type, String message, Location location) {
         if (!enabled) return;
-
         String locationInfo = null;
         if (location != null) {
             if (location.getWorld() == null) {
@@ -198,52 +200,42 @@ public class LogManager {
                         location.getChunk().getX(), location.getChunk().getZ());
             }
         }
-
         logQueue.offer(new LogEntry(System.currentTimeMillis(), type, message, locationInfo));
     }
 
-    public void logRedstoneRemoval(Location location, Material material, int chunkCount, int blockCount, String reason) {
+    public void logRedstoneRemoval(Location location, Material material,
+                                    int chunkCount, int blockCount, String reason) {
         if (!enabled) return;
-
-        String message = String.format("Redstone removed | Material: %s | Chunk Updates: %d | Block Updates: %d | Reason: %s",
+        String message = String.format(
+                "Redstone removed | Material: %s | Chunk Updates: %d | Block Updates: %d | Reason: %s",
                 material.toString(), chunkCount, blockCount, reason);
-
         logToFile("REDSTONE_REMOVED", message, location);
     }
 
     public void logPerformanceStats(int chunksMonitored, int blocksMonitored, double avgUpdatesPerSecond) {
         if (!enabled) return;
-
         String message = String.format("Performance Stats | Chunks: %d | Blocks: %d | Avg UPS: %.2f",
                 chunksMonitored, blocksMonitored, avgUpdatesPerSecond);
-
         logToFile("PERFORMANCE", message, null);
     }
 
     public void cleanupOldLogs() {
         if (!enabled) return;
-
-        File[] logFiles = logsFolder.listFiles((dir, name) -> name.startsWith("redstone-logs-") && name.endsWith(".log"));
-
+        File[] logFiles = logsFolder.listFiles(
+                (dir, name) -> name.startsWith("redstone-logs-") && name.endsWith(".log"));
         if (logFiles != null && logFiles.length > maxLogFiles) {
-            // Sort by last modified
-            java.util.Arrays.sort(logFiles, (f1, f2) -> Long.compare(f1.lastModified(), f2.lastModified()));
-
-            // Delete oldest files
+            java.util.Arrays.sort(logFiles, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
             for (int i = 0; i < logFiles.length - maxLogFiles; i++) {
                 if (logFiles[i].delete()) {
                     plugin.getLogger().info("Deleted old log file: " + logFiles[i].getName());
                 }
             }
         }
-
-        // Check current log file size (also checked on flush now)
         checkLogRotation();
     }
 
     public void close() {
         running = false;
-
         if (logThread != null) {
             logThread.interrupt();
             try {
@@ -252,10 +244,9 @@ public class LogManager {
                 Thread.currentThread().interrupt();
             }
         }
-
         if (logWriter != null) {
             try {
-                processLogQueue(); // Process any remaining logs
+                processLogQueue();
                 logWriter.close();
             } catch (IOException e) {
                 plugin.getLogger().log(Level.SEVERE, "Failed to close log writer!", e);

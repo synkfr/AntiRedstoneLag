@@ -52,6 +52,13 @@ public class PluginConfig extends OkaeriConfig {
     })
     private RemovalAction removalAction = RemovalAction.REMOVE;
 
+    @CustomKey("lockdown")
+    @Comment({
+        "Lockdown system (EMP) - Prevents players from repeatedly triggering lag machines",
+        "Duration in seconds to lock down the chunk when the threshold is exceeded"
+    })
+    private LockdownConfig lockdown = new LockdownConfig();
+
     @CustomKey("warning")
     @Comment("Warning system - warn players before removing their redstone")
     private WarningConfig warning = new WarningConfig();
@@ -94,6 +101,22 @@ public class PluginConfig extends OkaeriConfig {
             Material.DISPENSER,
             Material.HOPPER
     );
+
+    public static class LockdownConfig extends OkaeriConfig {
+        @CustomKey("enabled")
+        private boolean enabled = true;
+
+        @CustomKey("duration-seconds")
+        private int durationSeconds = 60;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public int getDurationSeconds() {
+            return Math.max(1, durationSeconds);
+        }
+    }
 
     public static class WarningConfig extends OkaeriConfig {
         @CustomKey("enabled")
@@ -204,6 +227,10 @@ public class PluginConfig extends OkaeriConfig {
 
     public RemovalAction getRemovalAction() {
         return removalAction != null ? removalAction : RemovalAction.REMOVE;
+    }
+
+    public LockdownConfig getLockdown() {
+        return lockdown;
     }
 
     public WarningConfig getWarning() {

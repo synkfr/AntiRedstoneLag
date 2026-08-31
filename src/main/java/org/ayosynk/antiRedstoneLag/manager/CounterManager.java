@@ -1,5 +1,6 @@
 package org.ayosynk.antiRedstoneLag.manager;
 
+import org.ayosynk.antiRedstoneLag.AntiRedstoneLag;
 import org.ayosynk.antiRedstoneLag.config.ConfigManager;
 import org.ayosynk.antiRedstoneLag.config.MessageManager;
 
@@ -8,11 +9,18 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -20,18 +28,45 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 public class CounterManager {
+    public static final int EVENT_NONE = 0;
+    public static final int EVENT_WARN = 1;
+    public static final int EVENT_DISABLE = 2;
+
+    public static class HotspotGroup {
+        public final String worldName;
+        public final UUID worldId;
+        public final int centerBlockX;
+        public final int centerBlockZ;
+        public final int totalActivity;
+        public final int chunkCount;
+
+        public HotspotGroup(String worldName, UUID worldId, int centerBlockX, int centerBlockZ, int totalActivity, int chunkCount) {
+            this.worldName = worldName;
+            this.worldId = worldId;
+            this.centerBlockX = centerBlockX;
+            this.centerBlockZ = centerBlockZ;
+            this.totalActivity = totalActivity;
+            this.chunkCount = chunkCount;
+        }
+    }
+
     private static final long ALERT_COOLDOWN_MS = 1000;
     private static final long WARNING_COOLDOWN_MS = 5000;
-    private static final long DAY_MS = 24 * 60 * 60 * 1000;
+    private static final long DAY_MS = 24L * 60 * 60 * 1000;
 
-    private final Object2IntOpenHashMap<String> chunkCounters = new Object2IntOpenHashMap<>();
-    private final Object2IntOpenHashMap<String> blockCounters = new Object2IntOpenHashMap<>();
-    private final Map<String, Long> warnedPlayers = new ConcurrentHashMap<>();
-    private final Object counterLock = new Object();
+    private final AntiRedstoneLag plugin;
     private final ConfigManager configManager;
     private final MessageManager messageManager;
     private final LogManager logManager;
     private final File statsFile;
+
+    private final Map<UUID, Long2LongOpenHashMap> chunkLockdowns = new ConcurrentHashMap<>();
+    private final Object lockdownLock = new Object();
+
+    private final Map<UUID, Long2IntOpenHashMap> chunkCounters = new ConcurrentHashMap<>();
+    private final Map<UUID, Long2IntOpenHashMap> blockCounters = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> warnedPlayers = new ConcurrentHashMap<>();
+    private final Object counterLock = new Object();
 
     private final AtomicInteger totalRemovals = new AtomicInteger(0);
     private final AtomicInteger removalsToday = new AtomicInteger(0);
@@ -39,7 +74,8 @@ public class CounterManager {
     private final AtomicLong lastWarningTime = new AtomicLong(0);
     private volatile long lastResetTime = System.currentTimeMillis();
 
-    public CounterManager(ConfigManager configManager, MessageManager messageManager, LogManager logManager, File dataFolder) {
+    public CounterManager(AntiRedstoneLag plugin, ConfigManager configManager, MessageManager messageManager, LogManager logManager, File dataFolder) {
+        this.plugin = plugin;
         this.configManager = configManager;
         this.messageManager = messageManager;
         this.logManager = logManager;
@@ -47,66 +83,173 @@ public class CounterManager {
         loadStats();
     }
 
-    public void incrementCounters(String chunkKey, String blockKey) {
-        if (chunkKey == null || blockKey == null) return;
+    public int processEvent(UUID worldId, long chunkKey, long blockKey) {
         synchronized (counterLock) {
-            chunkCounters.addTo(chunkKey, 1);
-            blockCounters.addTo(blockKey, 1);
+            Long2IntOpenHashMap cMap = chunkCounters.computeIfAbsent(worldId, k -> new Long2IntOpenHashMap());
+            Long2IntOpenHashMap bMap = blockCounters.computeIfAbsent(worldId, k -> new Long2IntOpenHashMap());
+
+            int chunkVal = cMap.addTo(chunkKey, 1) + 1;
+            int blockVal = bMap.addTo(blockKey, 1) + 1;
+
+            int chunkThreshold = configManager.getChunkThreshold();
+            int blockThreshold = configManager.getBlockThreshold();
+
+            if (chunkVal > chunkThreshold && blockVal > blockThreshold) {
+                return EVENT_DISABLE;
+            }
+
+            if (configManager.isWarningEnabled()) {
+                int chunkWarn = configManager.getChunkWarningThreshold();
+                int blockWarn = configManager.getBlockWarningThreshold();
+                if ((chunkVal >= chunkWarn && chunkVal <= chunkThreshold) ||
+                    (blockVal >= blockWarn && blockVal <= blockThreshold)) {
+                    return EVENT_WARN;
+                }
+            }
+
+            return EVENT_NONE;
         }
     }
 
-    public boolean shouldDisable(String chunkKey, String blockKey) {
-        if (chunkKey == null || blockKey == null) return false;
+    public List<HotspotGroup> getHotspots(int maxGroups) {
+        Map<UUID, Long2IntOpenHashMap> snapshot = new HashMap<>();
         synchronized (counterLock) {
-            int chunkCount = chunkCounters.getInt(chunkKey);
-            int blockCount = blockCounters.getInt(blockKey);
-            return (chunkCount > configManager.getChunkThreshold()) &&
-                    (blockCount > configManager.getBlockThreshold());
+            for (Map.Entry<UUID, Long2IntOpenHashMap> e : chunkCounters.entrySet()) {
+                Long2IntOpenHashMap src = e.getValue();
+                if (!src.isEmpty()) {
+                    snapshot.put(e.getKey(), new Long2IntOpenHashMap(src));
+                }
+            }
+        }
+
+        List<HotspotGroup> groups = new ArrayList<>();
+
+        for (Map.Entry<UUID, Long2IntOpenHashMap> worldEntry : snapshot.entrySet()) {
+            UUID worldId = worldEntry.getKey();
+            Long2IntOpenHashMap chunkMap = worldEntry.getValue();
+
+            org.bukkit.World world = Bukkit.getWorld(worldId);
+            String worldName = world != null ? world.getName() : worldId.toString();
+
+            LongOpenHashSet visited = new LongOpenHashSet(chunkMap.size() * 2);
+
+            for (long startKey : new LongOpenHashSet(chunkMap.keySet())) {
+                if (!visited.add(startKey)) continue;
+
+                ArrayDeque<Long> queue = new ArrayDeque<>();
+                List<Long> cluster = new ArrayList<>();
+                queue.add(startKey);
+                cluster.add(startKey);
+
+                while (!queue.isEmpty()) {
+                    long key = queue.poll();
+                    int cx = (int) (key >> 32);
+                    int cz = (int) key;
+
+                    long[] neighbors = {
+                        packChunk(cx + 1, cz), packChunk(cx - 1, cz),
+                        packChunk(cx, cz + 1), packChunk(cx, cz - 1)
+                    };
+                    for (long nb : neighbors) {
+                        if (chunkMap.containsKey(nb) && visited.add(nb)) {
+                            queue.add(nb);
+                            cluster.add(nb);
+                        }
+                    }
+                }
+
+                long weightedSumX = 0, weightedSumZ = 0, totalActivity = 0;
+                for (long key : cluster) {
+                    int cx = (int) (key >> 32);
+                    int cz = (int) key;
+                    int activity = chunkMap.get(key);
+                    weightedSumX += (long) cx * activity;
+                    weightedSumZ += (long) cz * activity;
+                    totalActivity += activity;
+                }
+
+                int centreChunkX = (int) (weightedSumX / totalActivity);
+                int centreChunkZ = (int) (weightedSumZ / totalActivity);
+                int centreBlockX = centreChunkX * 16 + 8;
+                int centreBlockZ = centreChunkZ * 16 + 8;
+
+                groups.add(new HotspotGroup(
+                        worldName, worldId,
+                        centreBlockX, centreBlockZ,
+                        (int) Math.min(totalActivity, Integer.MAX_VALUE),
+                        cluster.size()));
+            }
+        }
+
+        groups.sort((a, b) -> Integer.compare(b.totalActivity, a.totalActivity));
+        return groups.size() > maxGroups ? new ArrayList<>(groups.subList(0, maxGroups)) : groups;
+    }
+
+    public boolean isChunkLocked(UUID worldId, long chunkKey) {
+        synchronized (lockdownLock) {
+            Long2LongOpenHashMap lockdowns = chunkLockdowns.get(worldId);
+            if (lockdowns == null) return false;
+            long expiration = lockdowns.get(chunkKey);
+            if (expiration == 0L) return false;
+            if (System.currentTimeMillis() > expiration) {
+                lockdowns.remove(chunkKey);
+                return false;
+            }
+            return true;
         }
     }
 
-    public boolean shouldWarn(String chunkKey, String blockKey) {
-        if (!configManager.isWarningEnabled()) return false;
-        if (chunkKey == null || blockKey == null) return false;
-
-        synchronized (counterLock) {
-            int chunkVal = chunkCounters.getInt(chunkKey);
-            int blockVal = blockCounters.getInt(blockKey);
-
-            return (chunkVal >= configManager.getChunkWarningThreshold() && chunkVal <= configManager.getChunkThreshold()) ||
-                    (blockVal >= configManager.getBlockWarningThreshold() && blockVal <= configManager.getBlockThreshold());
+    public boolean lockdownChunk(UUID worldId, long chunkKey, long durationSeconds) {
+        synchronized (lockdownLock) {
+            Long2LongOpenHashMap lockdowns = chunkLockdowns.computeIfAbsent(worldId, k -> new Long2LongOpenHashMap());
+            long now = System.currentTimeMillis();
+            if (lockdowns.containsKey(chunkKey) && lockdowns.get(chunkKey) > now) {
+                return false;
+            }
+            lockdowns.put(chunkKey, now + (durationSeconds * 1000L));
+            return true;
         }
     }
 
-    public void sendWarning(Location location, Material material, java.util.UUID ownerUuid) {
-        if (location == null || location.getWorld() == null) return;
-        if (!canSendWarning()) return;
+    public long getLockdownRemaining(UUID worldId, long chunkKey) {
+        synchronized (lockdownLock) {
+            Long2LongOpenHashMap lockdowns = chunkLockdowns.get(worldId);
+            if (lockdowns == null) return 0;
+            long expiration = lockdowns.get(chunkKey);
+            if (expiration == 0L) return 0;
+            long remaining = expiration - System.currentTimeMillis();
+            return remaining > 0 ? remaining : 0;
+        }
+    }
 
-        String chunkKey = location.getWorld().getName() + ":" + (location.getBlockX() >> 4) + ":" + (location.getBlockZ() >> 4);
+    public void sendWarning(Location location, Material material, UUID ownerUuid) {
+        if (location == null || location.getWorld() == null || !canSendWarning() || ownerUuid == null) return;
+
+        long chunkKey = packChunk(location.getBlockX() >> 4, location.getBlockZ() >> 4);
         int currentCount;
         synchronized (counterLock) {
-            currentCount = chunkCounters.getInt(chunkKey);
+            Long2IntOpenHashMap cMap = chunkCounters.get(location.getWorld().getUID());
+            currentCount = cMap != null ? cMap.get(chunkKey) : 0;
         }
-        int threshold = configManager.getChunkThreshold();
-        int percent = (currentCount * 100) / threshold;
 
-        if (ownerUuid != null) {
-            Player owner = Bukkit.getPlayer(ownerUuid);
-            if (owner != null && owner.isOnline()) {
-                Long lastWarned = warnedPlayers.get(ownerUuid.toString());
-                long now = System.currentTimeMillis();
-                if (lastWarned == null || now - lastWarned >= WARNING_COOLDOWN_MS) {
-                    owner.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getAlerts().getRedstoneWarning())
-                            .replaceText(t -> t.matchLiteral("{x}").replacement(String.valueOf(location.getBlockX())))
-                            .replaceText(t -> t.matchLiteral("{y}").replacement(String.valueOf(location.getBlockY())))
-                            .replaceText(t -> t.matchLiteral("{z}").replacement(String.valueOf(location.getBlockZ())))
-                            .replaceText(t -> t.matchLiteral("{world}").replacement(location.getWorld().getName()))
-                            .replaceText(t -> t.matchLiteral("{material}").replacement(material.toString()))
-                            .replaceText(t -> t.matchLiteral("{percent}").replacement(String.valueOf(percent)))
-                            .replaceText(t -> t.matchLiteral("{current}").replacement(String.valueOf(currentCount)))
-                            .replaceText(t -> t.matchLiteral("{threshold}").replacement(String.valueOf(threshold))));
-                    warnedPlayers.put(ownerUuid.toString(), now);
-                }
+        int threshold = configManager.getChunkThreshold();
+        int percent = threshold > 0 ? (currentCount * 100) / threshold : 0;
+
+        Player owner = Bukkit.getPlayer(ownerUuid);
+        if (owner != null && owner.isOnline()) {
+            Long lastWarned = warnedPlayers.get(ownerUuid);
+            long now = System.currentTimeMillis();
+            if (lastWarned == null || now - lastWarned >= WARNING_COOLDOWN_MS) {
+                owner.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getAlerts().getRedstoneWarning())
+                        .replaceText(t -> t.matchLiteral("{x}").replacement(String.valueOf(location.getBlockX())))
+                        .replaceText(t -> t.matchLiteral("{y}").replacement(String.valueOf(location.getBlockY())))
+                        .replaceText(t -> t.matchLiteral("{z}").replacement(String.valueOf(location.getBlockZ())))
+                        .replaceText(t -> t.matchLiteral("{world}").replacement(location.getWorld().getName()))
+                        .replaceText(t -> t.matchLiteral("{material}").replacement(material.toString()))
+                        .replaceText(t -> t.matchLiteral("{percent}").replacement(String.valueOf(percent)))
+                        .replaceText(t -> t.matchLiteral("{current}").replacement(String.valueOf(currentCount)))
+                        .replaceText(t -> t.matchLiteral("{threshold}").replacement(String.valueOf(threshold))));
+                warnedPlayers.put(ownerUuid, now);
             }
         }
     }
@@ -124,14 +267,11 @@ public class CounterManager {
         if (configManager.isLogPerformance()) {
             logPerformanceStats();
         }
-
         synchronized (counterLock) {
-            chunkCounters.clear();
-            blockCounters.clear();
+            chunkCounters.values().forEach(Long2IntOpenHashMap::clear);
+            blockCounters.values().forEach(Long2IntOpenHashMap::clear);
         }
-
         warnedPlayers.clear();
-
         if (System.currentTimeMillis() - lastResetTime > DAY_MS) {
             removalsToday.set(0);
             lastResetTime = System.currentTimeMillis();
@@ -139,17 +279,15 @@ public class CounterManager {
         }
     }
 
-    public void handleRedstoneRemoval(Location location, Material material) {
+    public void handleRedstoneRemoval(Location location, Material material, long chunkKey, long blockKey) {
         if (location == null || location.getWorld() == null) return;
-        
-        String chunkKey = location.getWorld().getName() + ":" + (location.getBlockX() >> 4) + ":" + (location.getBlockZ() >> 4);
-        String blockKey = location.getWorld().getName() + ":" + location.getBlockX() + ":" + location.getBlockY() + ":" + location.getBlockZ();
-        int chunkCount, blockCount;
+        int chunkCount = 0, blockCount = 0;
         synchronized (counterLock) {
-            chunkCount = chunkCounters.getInt(chunkKey);
-            blockCount = blockCounters.getInt(blockKey);
+            Long2IntOpenHashMap cMap = chunkCounters.get(location.getWorld().getUID());
+            Long2IntOpenHashMap bMap = blockCounters.get(location.getWorld().getUID());
+            if (cMap != null) chunkCount = cMap.get(chunkKey);
+            if (bMap != null) blockCount = bMap.get(blockKey);
         }
-
         totalRemovals.incrementAndGet();
         removalsToday.incrementAndGet();
 
@@ -193,14 +331,23 @@ public class CounterManager {
     }
 
     private void logPerformanceStats() {
-        int chunksMonitored, blocksMonitored;
-        double avgUpdates;
+        int chunksMonitored = 0, blocksMonitored = 0;
+        long sum = 0;
         synchronized (counterLock) {
-            chunksMonitored = chunkCounters.size();
-            blocksMonitored = blockCounters.size();
-            avgUpdates = chunkCounters.values().intStream().average().orElse(0.0);
+            for (Long2IntOpenHashMap m : chunkCounters.values()) {
+                chunksMonitored += m.size();
+                for (int v : m.values()) sum += v;
+            }
+            for (Long2IntOpenHashMap m : blockCounters.values()) {
+                blocksMonitored += m.size();
+            }
         }
+        double avgUpdates = chunksMonitored > 0 ? (double) sum / chunksMonitored : 0;
         logManager.logPerformanceStats(chunksMonitored, blocksMonitored, avgUpdates);
+    }
+
+    public AntiRedstoneLag getPlugin() {
+        return plugin;
     }
 
     public int getTotalRemovals() {
@@ -213,19 +360,22 @@ public class CounterManager {
 
     public int getChunksMonitored() {
         synchronized (counterLock) {
-            return chunkCounters.size();
+            int total = 0;
+            for (Long2IntOpenHashMap m : chunkCounters.values()) total += m.size();
+            return total;
         }
     }
 
     public int getBlocksMonitored() {
         synchronized (counterLock) {
-            return blockCounters.size();
+            int total = 0;
+            for (Long2IntOpenHashMap m : blockCounters.values()) total += m.size();
+            return total;
         }
     }
 
     private void loadStats() {
         if (!statsFile.exists()) return;
-
         try {
             YamlConfiguration config = YamlConfiguration.loadConfiguration(statsFile);
             totalRemovals.set(config.getInt("total-removals", 0));
@@ -251,5 +401,13 @@ public class CounterManager {
         } catch (IOException e) {
             logManager.logToFile("ERROR", "Failed to save stats: " + e.getMessage(), null);
         }
+    }
+
+    public static long packChunk(int x, int z) {
+        return ((long) x << 32) | (z & 0xFFFFFFFFL);
+    }
+
+    public static long packBlock(int x, int y, int z) {
+        return ((long) (x & 0x3FFFFFF) << 38) | ((long) (z & 0x3FFFFFF) << 12) | (y & 0xFFF);
     }
 }

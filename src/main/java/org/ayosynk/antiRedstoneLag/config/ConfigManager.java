@@ -120,6 +120,14 @@ public class ConfigManager {
         return RemovalAction.REMOVE;
     }
 
+    public boolean isLockdownEnabled() {
+        return pluginConfig.getLockdown().isEnabled();
+    }
+
+    public int getLockdownDurationSeconds() {
+        return pluginConfig.getLockdown().getDurationSeconds();
+    }
+
     public boolean isWarningEnabled() {
         return pluginConfig.getWarning().isEnabled();
     }

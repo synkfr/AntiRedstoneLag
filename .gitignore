@@ -10,3 +10,12 @@
 # OS files
 .DS_Store
 Thumbs.db
+# Build tools and wrappers
+apache-maven-*/
+gradle-*/
+.gradle/
+*.zip
+*.tar.gz
+build.gradle*
+settings.gradle*
+

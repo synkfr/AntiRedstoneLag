@@ -48,7 +48,7 @@ public class AntiRedstoneLag extends JavaPlugin {
             scheduler = new BukkitSchedulerImpl(this);
         }
 
-        counterManager = new CounterManager(configManager, messageManager, logManager, getDataFolder());
+        counterManager = new CounterManager(this, configManager, messageManager, logManager, getDataFolder());
         redstoneListener = new RedstoneListener(counterManager, configManager);
 
         getServer().getPluginManager().registerEvents(redstoneListener, this);

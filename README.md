@@ -2,8 +2,8 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue?style=for-the-badge&logo=github)](https://github.com/synkfr/AntiRedstoneLag/releases)
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.21+-green?style=for-the-badge&logo=minecraft)](https://www.minecraft.net/)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue?style=for-the-badge&logo=github)](https://github.com/synkfr/AntiRedstoneLag/releases)
+[![Minecraft](https://img.shields.io/badge/Minecraft-26_-green?style=for-the-badge&logo=minecraft)](https://www.minecraft.net/)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](LICENSE)
 [![Discord](https://img.shields.io/discord/1378591879393710110?style=for-the-badge&logo=discord&label=Discord)](https://discord.gg/fGyDyp3Ak4)
 
@@ -26,7 +26,9 @@ AntiRedstoneLag is a lightweight yet extremely powerful plugin designed to safeg
 - 🚀 **Asynchronous Foundation**: Logging and timestamp generation are offloaded to background threads.
 - 🎯 **O(1) Chunk Cleanup**: Refactored tracking logic for instant cleanup during chunk unloading.
 - 🌈 **Modern UI**: Full migration to **Adventure API** and **MiniMessage** for beautiful, hex-color alerts.
-- 🛡️ **Lag Guard 1.21**: Specifically optimized for Paper 1.21+ physics and redstone handling.
+- 🗺️ **Hotspot Analytics**: View server-wide activity clusters and teleport directly to them via `/arl hotspots`.
+- ⚡ **Extreme Performance**: Minimal lock contention, zero-allocation logging, and fully off-thread notifications.
+- 🛡️ **Lag Guard 26_**: Specifically optimized for Paper physics and redstone handling.
 - ⚙️ **Smart Actions**: Choose between `REMOVE` (with physics notifications), `DROP`, or `DISABLE`.
 - 📊 **Persistent Analytics**: Statistics tracking that survives server restarts.
 - 🔄 **Automated CI/CD**: Development builds published automatically via GitHub Actions.
@@ -104,6 +106,7 @@ logging:
 | `/arl reload` | Hot-reload config | `antiredstonelag.reload` |
 | `/arl stats` | Real-time performance stats | `antiredstonelag.stats` |
 | `/arl logs` | View removal history | `antiredstonelag.logs` |
+| `/arl hotspots` | View and export clustered lag sources | `antiredstonelag.hotspots` |
 
 ---
 

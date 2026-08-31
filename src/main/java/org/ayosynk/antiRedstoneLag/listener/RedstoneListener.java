@@ -10,7 +10,6 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -18,28 +17,35 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockRedstoneEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Listens for redstone events and block placements.
- * Monitors redstone activity and applies configured actions when thresholds are exceeded.
- */
 public class RedstoneListener implements Listener {
     private static final String BYPASS_PERMISSION = "antiredstonelag.bypass";
+
+    private static final boolean IS_FOLIA;
+    static {
+        boolean folia;
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionConfiguration");
+            folia = true;
+        } catch (ClassNotFoundException ignored) {
+            folia = false;
+        }
+        IS_FOLIA = folia;
+    }
 
     private final CounterManager counterManager;
     private final ConfigManager configManager;
 
-    // Track who placed redstone blocks (Chunk key -> Block key -> player UUID)
-    private final Map<String, Map<String, UUID>> blockOwners = new ConcurrentHashMap<>();
+    private final Map<UUID, Long2ObjectOpenHashMap<Long2ObjectOpenHashMap<UUID>>> blockOwners = new ConcurrentHashMap<>();
+    private final Map<UUID, LongOpenHashSet> disabledBlocks = new ConcurrentHashMap<>();
 
-    // Track blocks that have been disabled via the DISABLE action to short-circuit repeated events
-    private final Set<String> disabledBlocks = ConcurrentHashMap.newKeySet();
-
-    // Cached config values for performance
     private volatile Set<Material> cachedRedstoneMaterials;
     private volatile Set<String> cachedEnabledWorlds;
     private volatile ConfigManager.RemovalAction cachedRemovalAction;
@@ -50,9 +56,6 @@ public class RedstoneListener implements Listener {
         refreshCache();
     }
 
-    /**
-     * Refresh cached config values. Call this after config reload.
-     */
     public void refreshCache() {
         this.cachedRedstoneMaterials = configManager.getRedstoneMaterials();
         this.cachedEnabledWorlds = configManager.getEnabledWorlds();
@@ -62,17 +65,14 @@ public class RedstoneListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         Block block = event.getBlock();
-        Material material = block.getType();
+        if (!cachedRedstoneMaterials.contains(block.getType())) return;
 
-        // Track redstone block placements using cached materials
-        if (cachedRedstoneMaterials.contains(material)) {
-            // Avoid creating Location object - use block coordinates directly
-            String chunkKey = getChunkKey(block.getWorld(), block.getX() >> 4, block.getZ() >> 4);
-            String blockKey = getBlockKey(block.getWorld(), block.getX(), block.getY(), block.getZ());
-            
-            blockOwners.computeIfAbsent(chunkKey, k -> new ConcurrentHashMap<>())
-                       .put(blockKey, event.getPlayer().getUniqueId());
-        }
+        long chunkKey = CounterManager.packChunk(block.getX() >> 4, block.getZ() >> 4);
+        long blockKey = CounterManager.packBlock(block.getX(), block.getY(), block.getZ());
+
+        blockOwners.computeIfAbsent(block.getWorld().getUID(), k -> new Long2ObjectOpenHashMap<>())
+                   .computeIfAbsent(chunkKey, k -> new Long2ObjectOpenHashMap<>())
+                   .put(blockKey, event.getPlayer().getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
@@ -80,128 +80,149 @@ public class RedstoneListener implements Listener {
         Block block = event.getBlock();
         Material material = block.getType();
         World world = block.getWorld();
-        String worldName = world.getName();
+        UUID worldId = world.getUID();
 
-        // Check if world is enabled using cached worlds
-        if (!cachedEnabledWorlds.contains("*") && !cachedEnabledWorlds.contains(worldName)) {
-            return;
-        }
+        if (!cachedEnabledWorlds.contains("*") && !cachedEnabledWorlds.contains(world.getName())) return;
+        if (!cachedRedstoneMaterials.contains(material)) return;
 
-        // Check if material is monitored using cached materials
-        if (!cachedRedstoneMaterials.contains(material)) {
-            return;
-        }
-
-        // Get block coordinates once to avoid repeated calls
         int blockX = block.getX();
         int blockY = block.getY();
         int blockZ = block.getZ();
-        String blockKey = getBlockKey(world, blockX, blockY, blockZ);
+        long blockKey = CounterManager.packBlock(blockX, blockY, blockZ);
+        long chunkKey = CounterManager.packChunk(blockX >> 4, blockZ >> 4);
 
-        // Short-circuit if this block was already disabled by DISABLE action
-        if (disabledBlocks.contains(blockKey)) {
+        LongOpenHashSet worldDisabled = disabledBlocks.get(worldId);
+        if (worldDisabled != null && worldDisabled.contains(blockKey)) {
             event.setNewCurrent(0);
             return;
         }
 
-        // Use chunk key directly to avoid Location object creation
-        String chunkKey = getChunkKey(world, blockX >> 4, blockZ >> 4);
-
-        // Check bypass permission for block owner
-        if (hasOwnerBypass(chunkKey, blockKey)) {
+        if (counterManager.isChunkLocked(worldId, chunkKey)) {
+            event.setNewCurrent(0);
             return;
         }
 
-        // Check whitelist mode - skip if chunk is not whitelisted
-        if (!configManager.isChunkWhitelisted(chunkKey)) {
-            return;
+        if (hasOwnerBypass(worldId, chunkKey, blockKey)) return;
+
+        if (configManager.isWhitelistEnabled()) {
+            String strChunkKey = world.getName() + ":" + (blockX >> 4) + ":" + (blockZ >> 4);
+            if (!configManager.isChunkWhitelisted(strChunkKey)) return;
         }
 
-        counterManager.incrementCounters(chunkKey, blockKey);
+        int result = counterManager.processEvent(worldId, chunkKey, blockKey);
 
-        // Check if we should warn the player (approaching threshold)
-        if (counterManager.shouldWarn(chunkKey, blockKey)) {
-            Map<String, UUID> chunkOwners = blockOwners.get(chunkKey);
-            UUID ownerUuid = chunkOwners != null ? chunkOwners.get(blockKey) : null;
+        if (result == CounterManager.EVENT_WARN) {
+            UUID ownerUuid = getOwner(worldId, chunkKey, blockKey);
             if (ownerUuid != null) {
-                Location location = block.getLocation();
-                counterManager.sendWarning(location, material, ownerUuid);
+                counterManager.sendWarning(block.getLocation(), material, ownerUuid);
             }
-        }
-
-        if (counterManager.shouldDisable(chunkKey, blockKey)) {
-            // Apply configured removal action
-            applyRemovalAction(block, material, event);
-
-            // Clean up owner tracking
-            Map<String, UUID> chunkOwners = blockOwners.get(chunkKey);
-            if (chunkOwners != null) {
-                chunkOwners.remove(blockKey);
-                if (chunkOwners.isEmpty()) {
-                    blockOwners.remove(chunkKey);
+        } else if (result == CounterManager.EVENT_DISABLE) {
+            if (configManager.isLockdownEnabled()) {
+                int duration = configManager.getLockdownDurationSeconds();
+                if (counterManager.lockdownChunk(worldId, chunkKey, duration)) {
+                    broadcastLockdownNotification(worldId, world.getName(), chunkKey, duration);
                 }
             }
 
-            // Handle removal (logging, alerts, etc.) - create Location only when needed
-            Location location = block.getLocation();
-            counterManager.handleRedstoneRemoval(location, material);
+            applyRemovalAction(block, material, event, worldId, blockKey);
+
+            Long2ObjectOpenHashMap<Long2ObjectOpenHashMap<UUID>> worldOwners = blockOwners.get(worldId);
+            if (worldOwners != null) {
+                Long2ObjectOpenHashMap<UUID> chunkOwners = worldOwners.get(chunkKey);
+                if (chunkOwners != null) {
+                    chunkOwners.remove(blockKey);
+                    if (chunkOwners.isEmpty()) worldOwners.remove(chunkKey);
+                }
+            }
+
+            counterManager.handleRedstoneRemoval(block.getLocation(), material, chunkKey, blockKey);
         }
     }
 
-    private void applyRemovalAction(Block block, Material material, BlockRedstoneEvent event) {
-        // Prevent multiple applications for the same block in a single tick
-        if (block.getType() == Material.AIR) {
+    private void broadcastLockdownNotification(UUID worldId, String worldName, long chunkKey, int duration) {
+        int chunkX = (int) (chunkKey >> 32);
+        int chunkZ = (int) chunkKey;
+
+        final net.kyori.adventure.text.Component adminMsg =
+                counterManager.getPlugin().getMessageManager().parseMessage(
+                        counterManager.getPlugin().getMessageManager().getMessagesConfig().getAlerts().getChunkLockdownAdmin())
+                        .replaceText(t -> t.matchLiteral("{world}").replacement(worldName))
+                        .replaceText(t -> t.matchLiteral("{chunkX}").replacement(String.valueOf(chunkX)))
+                        .replaceText(t -> t.matchLiteral("{chunkZ}").replacement(String.valueOf(chunkZ)))
+                        .replaceText(t -> t.matchLiteral("{duration}").replacement(String.valueOf(duration)));
+
+        final net.kyori.adventure.text.Component localMsg =
+                counterManager.getPlugin().getMessageManager().parseMessage(
+                        counterManager.getPlugin().getMessageManager().getMessagesConfig().getAlerts().getChunkLockdownLocal())
+                        .replaceText(t -> t.matchLiteral("{duration}").replacement(String.valueOf(duration)));
+
+        counterManager.getPlugin().getScheduler().runTaskAsynchronously(() -> {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                if (p.hasPermission("antiredstonelag.alerts")) {
+                    p.sendMessage(adminMsg);
+                }
+                if (p.getWorld().getUID().equals(worldId)) {
+                    int pChunkX = p.getLocation().getBlockX() >> 4;
+                    int pChunkZ = p.getLocation().getBlockZ() >> 4;
+                    if (Math.abs(pChunkX - chunkX) <= 1 && Math.abs(pChunkZ - chunkZ) <= 1) {
+                        if (!p.hasPermission("antiredstonelag.alerts")) {
+                            p.sendMessage(localMsg);
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    private UUID getOwner(UUID worldId, long chunkKey, long blockKey) {
+        Long2ObjectOpenHashMap<Long2ObjectOpenHashMap<UUID>> worldOwners = blockOwners.get(worldId);
+        if (worldOwners != null) {
+            Long2ObjectOpenHashMap<UUID> chunkOwners = worldOwners.get(chunkKey);
+            if (chunkOwners != null) return chunkOwners.get(blockKey);
+        }
+        return null;
+    }
+
+    private void applyRemovalAction(Block block, Material material, BlockRedstoneEvent event,
+                                    UUID worldId, long blockKey) {
+        event.setNewCurrent(0);
+        disabledBlocks.computeIfAbsent(worldId, k -> new LongOpenHashSet()).add(blockKey);
+
+        if (block.getType() == Material.AIR || cachedRemovalAction == ConfigManager.RemovalAction.DISABLE) {
             return;
         }
 
-        switch (cachedRemovalAction) {
-            case REMOVE:
-                // Set to AIR and apply physics to notify neighbors to stop updates
-                block.setType(Material.AIR, true);
-                break;
-            case DISABLE:
-                // Cancel the redstone signal and track the block to prevent infinite re-checks
-                event.setNewCurrent(0);
-                disabledBlocks.add(getBlockKey(block.getWorld(), block.getX(), block.getY(), block.getZ()));
-                break;
-            case DROP:
-                // Break block naturally and ensure physics updates
+        Location loc = block.getLocation();
+        Runnable task = () -> {
+            if (block.getType() == Material.AIR) return;
+            if (cachedRemovalAction == ConfigManager.RemovalAction.REMOVE) {
+                block.setType(Material.AIR, false);
+            } else if (cachedRemovalAction == ConfigManager.RemovalAction.DROP) {
                 block.breakNaturally();
-                // Ensure it's gone and neighbors are notified even if breakNaturally was delayed
-                if (block.getType() != Material.AIR) {
-                    block.setType(Material.AIR, true);
-                }
-                break;
+            }
+        };
+
+        if (IS_FOLIA) {
+            Bukkit.getRegionScheduler().execute(counterManager.getPlugin(), loc, task);
+        } else {
+            Bukkit.getScheduler().runTask(counterManager.getPlugin(), task);
         }
     }
 
-    private boolean hasOwnerBypass(String chunkKey, String blockKey) {
-        Map<String, UUID> chunkOwners = blockOwners.get(chunkKey);
-        UUID ownerUuid = chunkOwners != null ? chunkOwners.get(blockKey) : null;
-
+    private boolean hasOwnerBypass(UUID worldId, long chunkKey, long blockKey) {
+        UUID ownerUuid = getOwner(worldId, chunkKey, blockKey);
         if (ownerUuid != null) {
             Player owner = Bukkit.getPlayer(ownerUuid);
-            if (owner != null && owner.hasPermission(BYPASS_PERMISSION)) {
-                return true;
-            }
+            if (owner != null && owner.hasPermission(BYPASS_PERMISSION)) return true;
         }
         return false;
     }
 
-    private String getBlockKey(World world, int x, int y, int z) {
-        return world.getName() + ":" + x + ":" + y + ":" + z;
-    }
-
-    private String getChunkKey(World world, int chunkX, int chunkZ) {
-        return world.getName() + ":" + chunkX + ":" + chunkZ;
-    }
-
-    // Clean up tracking for unloaded chunks - O(1) removal
     public void cleanupChunk(Chunk chunk) {
-        String chunkKey = getChunkKey(chunk.getWorld(), chunk.getX(), chunk.getZ());
-        blockOwners.remove(chunkKey);
-        // Clean up disabled blocks in this chunk
-        disabledBlocks.removeIf(key -> key.startsWith(chunk.getWorld().getName() + ":" + chunk.getX() + ":") || key.startsWith(chunkKey));
+        UUID worldId = chunk.getWorld().getUID();
+        long chunkKey = CounterManager.packChunk(chunk.getX(), chunk.getZ());
+        Long2ObjectOpenHashMap<Long2ObjectOpenHashMap<UUID>> worldOwners = blockOwners.get(worldId);
+        if (worldOwners != null) worldOwners.remove(chunkKey);
     }
 
     @EventHandler
@@ -209,10 +230,24 @@ public class RedstoneListener implements Listener {
         cleanupChunk(event.getChunk());
     }
 
-    /**
-     * Clear disabled blocks tracking. Called on counter reset to allow re-evaluation.
-     */
     public void clearDisabledBlocks() {
-        disabledBlocks.clear();
+        disabledBlocks.values().forEach(LongOpenHashSet::clear);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPlayerInteract(org.bukkit.event.player.PlayerInteractEvent event) {
+        if (event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) return;
+        Block block = event.getClickedBlock();
+        if (block == null) return;
+        if (!cachedRedstoneMaterials.contains(block.getType())) return;
+
+        UUID worldId = block.getWorld().getUID();
+        long chunkKey = CounterManager.packChunk(block.getX() >> 4, block.getZ() >> 4);
+        if (counterManager.isChunkLocked(worldId, chunkKey)) {
+            long remaining = counterManager.getLockdownRemaining(worldId, chunkKey) / 1000;
+            event.setCancelled(true);
+            event.getPlayer().sendMessage(net.kyori.adventure.text.Component.text(
+                    "§c[!] Redstone in this chunk is on lockdown for " + remaining + "s due to extreme lag."));
+        }
     }
 }

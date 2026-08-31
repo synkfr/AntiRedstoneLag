@@ -18,6 +18,7 @@ permissions:
       antiredstonelag.logs: true
       antiredstonelag.alerts: true
       antiredstonelag.bypass: true
+      antiredstonelag.hotspots: true
       antiredstonelag.admin: true
   antiredstonelag.use:
     description: Use basic plugin commands
@@ -37,6 +38,9 @@ permissions:
   antiredstonelag.bypass:
     description: Bypass redstone limits
     default: false
+  antiredstonelag.hotspots:
+    description: View and export redstone hotspot map
+    default: op
   antiredstonelag.admin:
     description: Receive update notifications
     default: op

@@ -2,23 +2,36 @@ package org.ayosynk.antiRedstoneLag.command;
 
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.ayosynk.antiRedstoneLag.AntiRedstoneLag;
 import org.ayosynk.antiRedstoneLag.config.ConfigManager;
 import org.ayosynk.antiRedstoneLag.config.MessageManager;
-import org.ayosynk.antiRedstoneLag.manager.CounterManager;
-import org.ayosynk.antiRedstoneLag.manager.LogManager;
 import org.ayosynk.antiRedstoneLag.listener.RedstoneListener;
+import org.ayosynk.antiRedstoneLag.manager.CounterManager;
+import org.ayosynk.antiRedstoneLag.manager.CounterManager.HotspotGroup;
+import org.ayosynk.antiRedstoneLag.manager.LogManager;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 public class CommandHandler implements BasicCommand {
+    private static final int HOTSPOT_MAX = 50;
+    private static final int HOTSPOT_PAGE = 10;
+    private static final MiniMessage MM = MiniMessage.miniMessage();
+
     private final AntiRedstoneLag plugin;
     private final ConfigManager configManager;
     private final MessageManager messageManager;
@@ -26,7 +39,9 @@ public class CommandHandler implements BasicCommand {
     private final CounterManager counterManager;
     private final TabCompleteHandler tabCompleteHandler;
 
-    public CommandHandler(AntiRedstoneLag plugin, ConfigManager configManager, MessageManager messageManager, LogManager logManager, CounterManager counterManager) {
+    public CommandHandler(AntiRedstoneLag plugin, ConfigManager configManager,
+                          MessageManager messageManager, LogManager logManager,
+                          CounterManager counterManager) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.messageManager = messageManager;
@@ -48,17 +63,18 @@ public class CommandHandler implements BasicCommand {
                 if (!hasPermission(sender, "antiredstonelag.reload")) return;
                 reloadCommand(sender);
                 break;
-
             case "stats":
                 if (!hasPermission(sender, "antiredstonelag.stats")) return;
                 statsCommand(sender);
                 break;
-
             case "logs":
                 if (!hasPermission(sender, "antiredstonelag.logs")) return;
                 logsCommand(sender, args);
                 break;
-
+            case "hotspots":
+                if (!hasPermission(sender, "antiredstonelag.hotspots")) return;
+                hotspotsCommand(sender, args);
+                break;
             case "help":
             default:
                 showHelp(sender);
@@ -79,6 +95,157 @@ public class CommandHandler implements BasicCommand {
     @Override
     public @Nullable String permission() {
         return "antiredstonelag.use";
+    }
+
+    private void hotspotsCommand(CommandSender sender, String[] args) {
+        boolean isExport = args.length > 1 && args[1].equalsIgnoreCase("export");
+        if (isExport) {
+            exportHotspots(sender);
+            return;
+        }
+
+        int page = 1;
+        if (args.length > 1) {
+            try {
+                page = Integer.parseInt(args[1]);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        List<HotspotGroup> hotspots = counterManager.getHotspots(HOTSPOT_MAX);
+
+        int totalPages = Math.max(1, (int) Math.ceil(hotspots.size() / (double) HOTSPOT_PAGE));
+        page = Math.max(1, Math.min(page, totalPages));
+        int start = (page - 1) * HOTSPOT_PAGE;
+        int end = Math.min(start + HOTSPOT_PAGE, hotspots.size());
+
+        sender.sendMessage(MM.deserialize(
+                "<gold>━━━ <yellow>🔥 Redstone Hotspots</yellow>" +
+                " <dark_gray>(" + hotspots.size() + " group" + (hotspots.size() == 1 ? "" : "s") + ")" +
+                " <gold>━━━"));
+
+        if (hotspots.isEmpty()) {
+            sender.sendMessage(MM.deserialize(
+                    "<gray>No redstone activity is tracked yet. Counters reset every interval.</gray>"));
+            return;
+        }
+
+        sender.sendMessage(MM.deserialize(
+                "<dark_gray>Adj. chunks merged · Weighted centre · Top " + HOTSPOT_MAX + "</dark_gray>"));
+
+        for (int i = start; i < end; i++) {
+            HotspotGroup g = hotspots.get(i);
+            int rank = i + 1;
+
+            String prefix;
+            if (rank == 1) prefix = "<gold>🥇</gold> ";
+            else if (rank == 2) prefix = "<gray>🥈</gray> ";
+            else if (rank == 3) prefix = "<#CD7F32>🥉</#CD7F32> ";
+            else prefix = "<dark_gray>#" + rank + "</dark_gray> ";
+
+            Component row = MM.deserialize(
+                    prefix +
+                    "<white>" + g.worldName + "</white> " +
+                    "<aqua>[" + g.centerBlockX + ", ~, " + g.centerBlockZ + "]</aqua>" +
+                    " <dark_gray>·</dark_gray> Act: <green>" + g.totalActivity + "</green>" +
+                    " <dark_gray>·</dark_gray> <dark_gray>Chunks: " + g.chunkCount + "</dark_gray>"
+            )
+            .clickEvent(ClickEvent.suggestCommand(
+                    "/tp @s " + g.centerBlockX + " ~ " + g.centerBlockZ))
+            .hoverEvent(HoverEvent.showText(MM.deserialize(
+                    "<gray>World: <white>" + g.worldName + "</white>\n" +
+                    "Centre: <white>" + g.centerBlockX + ", ~, " + g.centerBlockZ + "</white>\n" +
+                    "Activity: <green>" + g.totalActivity + "</green> updates\n" +
+                    "Cluster size: <green>" + g.chunkCount + "</green> chunk(s)\n" +
+                    "<yellow>Click to suggest teleport command</yellow>")));
+
+            sender.sendMessage(row);
+        }
+
+        Component nav = Component.empty();
+
+        if (page > 1) {
+            nav = nav.append(MM.deserialize(
+                    "<gold>[<click:run_command:'/arl hotspots " + (page - 1) + "'>◄ Prev</click>]</gold>"))
+                    .append(Component.text("  "));
+        }
+
+        nav = nav.append(MM.deserialize(
+                "<gray>Page <white>" + page + "</white> / <white>" + totalPages + "</white></gray>"));
+
+        if (page < totalPages) {
+            nav = nav.append(Component.text("  "))
+                    .append(MM.deserialize(
+                            "<gold>[<click:run_command:'/arl hotspots " + (page + 1) + "'>Next ►</click>]</gold>"));
+        }
+
+        nav = nav.append(Component.text("  "))
+                .append(MM.deserialize(
+                        "<dark_gray>[<hover:show_text:'<gray>Export all " + hotspots.size() +
+                        " hotspots to a log file'><click:run_command:'/arl hotspots export'>" +
+                        "📄 Export</click></hover>]</dark_gray>"));
+
+        sender.sendMessage(nav);
+    }
+
+    private void exportHotspots(CommandSender sender) {
+        List<HotspotGroup> hotspots = counterManager.getHotspots(HOTSPOT_MAX);
+
+        if (hotspots.isEmpty()) {
+            sender.sendMessage(MM.deserialize(
+                    "<red>✗ No hotspot data to export – no redstone activity tracked yet.</red>"));
+            return;
+        }
+
+        File logsDir = logManager.getLogsFolder();
+        if (logsDir == null) {
+            logsDir = new File(plugin.getDataFolder(), "logs");
+            logsDir.mkdirs();
+        }
+
+        String timestamp = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date());
+        File exportFile = new File(logsDir, "hotspot-export-" + timestamp + ".txt");
+
+        try (PrintWriter pw = new PrintWriter(new FileWriter(exportFile))) {
+            pw.println("=== AntiRedstoneLag – Redstone Hotspot Export ===");
+            pw.println("Generated : " + new Date());
+            pw.println("Groups    : " + hotspots.size());
+            pw.println("Algorithm : Adjacent-chunk BFS, activity-weighted centre");
+            pw.println();
+            pw.printf("%-4s  %-24s  %12s  %12s  %10s  %7s%n",
+                    "Rank", "World", "Centre X", "Centre Z", "Activity", "Chunks");
+            pw.println("─".repeat(80));
+
+            for (int i = 0; i < hotspots.size(); i++) {
+                HotspotGroup g = hotspots.get(i);
+                pw.printf("%-4d  %-24s  %12d  %12d  %10d  %7d%n",
+                        i + 1, g.worldName, g.centerBlockX, g.centerBlockZ,
+                        g.totalActivity, g.chunkCount);
+            }
+
+            pw.println();
+            pw.println("Teleport commands:");
+            for (int i = 0; i < hotspots.size(); i++) {
+                HotspotGroup g = hotspots.get(i);
+                pw.printf("#%-3d  /tp @s %d ~ %d  (world: %s)%n",
+                        i + 1, g.centerBlockX, g.centerBlockZ, g.worldName);
+            }
+        } catch (IOException e) {
+            plugin.getLogger().severe("Failed to write hotspot export: " + e.getMessage());
+            sender.sendMessage(MM.deserialize(
+                    "<red>✗ Failed to write export file – check server logs.</red>"));
+            return;
+        }
+
+        logManager.logToFile("HOTSPOT_EXPORT",
+                "Exported " + hotspots.size() + " hotspots to " + exportFile.getName(),
+                null);
+
+        sender.sendMessage(MM.deserialize(
+                "<green>✓ Exported <white>" + hotspots.size() + "</white> hotspot" +
+                (hotspots.size() == 1 ? "" : "s") + " to:</green>"));
+        sender.sendMessage(MM.deserialize(
+                "<aqua>" + exportFile.getAbsolutePath() + "</aqua>"));
     }
 
     private void showHelp(CommandSender sender) {

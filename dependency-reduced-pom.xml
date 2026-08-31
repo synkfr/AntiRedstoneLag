@@ -4,7 +4,7 @@
   <groupId>org.ayosynk</groupId>
   <artifactId>AntiRedstoneLag</artifactId>
   <name>AntiRedstoneLag</name>
-  <version>2.0.0</version>
+  <version>26.2</version>
   <build>
     <defaultGoal>clean package</defaultGoal>
     <resources>
@@ -18,13 +18,12 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
-          <source>${java.version}</source>
-          <target>${java.version}</target>
+          <release>${maven.compiler.release}</release>
         </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.5.3</version>
+        <version>3.6.0</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -44,8 +43,12 @@
               <shadedPattern>org.ayosynk.fastutil</shadedPattern>
             </relocation>
             <relocation>
-              <pattern>net.kyori.adventure.platform</pattern>
-              <shadedPattern>org.ayosynk.adventure.platform</shadedPattern>
+              <pattern>eu.okaeri</pattern>
+              <shadedPattern>org.ayosynk.okaeri</shadedPattern>
+            </relocation>
+            <relocation>
+              <pattern>org.yaml.snakeyaml</pattern>
+              <shadedPattern>org.ayosynk.snakeyaml</shadedPattern>
             </relocation>
           </relocations>
           <minimizeJar>true</minimizeJar>
@@ -54,6 +57,10 @@
     </plugins>
   </build>
   <repositories>
+    <repository>
+      <id>okaeri-repo</id>
+      <url>https://repo.okaeri.cloud/releases</url>
+    </repository>
     <repository>
       <id>papermc-repo</id>
       <url>https://repo.papermc.io/repository/maven-public/</url>
@@ -67,24 +74,14 @@
     <dependency>
       <groupId>io.papermc.paper</groupId>
       <artifactId>paper-api</artifactId>
-      <version>1.21.1-R0.1-SNAPSHOT</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>net.kyori</groupId>
-      <artifactId>adventure-api</artifactId>
-      <version>4.17.0</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>net.kyori</groupId>
-      <artifactId>adventure-text-minimessage</artifactId>
-      <version>4.17.0</version>
+      <version>1.21.4-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>
   <properties>
-    <java.version>21</java.version>
+    <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <okaeri.version>5.0.13</okaeri.version>
+    <java.version>21</java.version>
   </properties>
 </project>
