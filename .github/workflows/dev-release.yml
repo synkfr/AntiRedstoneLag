@@ -8,6 +8,10 @@ on:
       - '**.md'
       - '.gitignore'
 
+concurrency:
+  group: dev-release
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,22 +38,27 @@ jobs:
         id: get_version
         run: echo "VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
 
-      - name: Create Pre-Release
+      - name: Update Dev Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: dev-b${{ github.run_number }}
-          name: "Development Build #${{ github.run_number }} (v${{ steps.get_version.outputs.VERSION }})"
+          tag_name: dev-latest
+          target_commitish: ${{ github.sha }}
+          name: "AntiRedstoneLag Latest Dev Build (v${{ steps.get_version.outputs.VERSION }})"
           body: |
-            ## Development Build #${{ github.run_number }}
+            ## AntiRedstoneLag Latest Development Build
             
-            **Commit:** `${{ github.sha }}`
+            **Commit:** [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
             **Branch:** `${{ github.ref_name }}`
+            **Built at:** `${{ github.event.head_commit.timestamp }}`
             
-            This is an automated development build for testing purposes. It reflects the latest changes on the `master` branch.
+            > This is an automated rolling development build that always points to the latest commit on `master`.
             
-            ### 🛠 Changes in this build
+            ### 🛠 Latest Commit Message
+            ```
             ${{ github.event.head_commit.message }}
+            ```
           prerelease: true
+          make_latest: false
           files: target/AntiRedstoneLag-*.jar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
