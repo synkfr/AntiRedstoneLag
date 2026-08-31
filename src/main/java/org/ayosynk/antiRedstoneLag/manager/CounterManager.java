@@ -96,8 +96,7 @@ public class CounterManager {
                 Long lastWarned = warnedPlayers.get(ownerUuid.toString());
                 long now = System.currentTimeMillis();
                 if (lastWarned == null || now - lastWarned >= WARNING_COOLDOWN_MS) {
-                    owner.sendMessage(messageManager.getMessage("alerts.redstone-warning",
-                                    "&#FFD93D⚠ &eWarning: &7Redstone activity at &e{x}, {y}, {z} &7is at &c{percent}% &7of threshold!")
+                    owner.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getAlerts().getRedstoneWarning())
                             .replaceText(t -> t.matchLiteral("{x}").replacement(String.valueOf(location.getBlockX())))
                             .replaceText(t -> t.matchLiteral("{y}").replacement(String.valueOf(location.getBlockY())))
                             .replaceText(t -> t.matchLiteral("{z}").replacement(String.valueOf(location.getBlockZ())))
@@ -173,7 +172,7 @@ public class CounterManager {
     private void sendAlert(Location location, Material material, int chunkCount, int blockCount) {
         if (location.getWorld() == null) return;
         
-        net.kyori.adventure.text.Component alertComponent = messageManager.getMessage("alerts.redstone-removed")
+        net.kyori.adventure.text.Component alertComponent = messageManager.parseMessage(messageManager.getMessagesConfig().getAlerts().getRedstoneRemoved())
                 .replaceText(t -> t.matchLiteral("{x}").replacement(String.valueOf(location.getBlockX())))
                 .replaceText(t -> t.matchLiteral("{y}").replacement(String.valueOf(location.getBlockY())))
                 .replaceText(t -> t.matchLiteral("{z}").replacement(String.valueOf(location.getBlockZ())))

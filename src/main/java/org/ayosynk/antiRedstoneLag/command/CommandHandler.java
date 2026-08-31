@@ -82,13 +82,7 @@ public class CommandHandler implements BasicCommand {
     }
 
     private void showHelp(CommandSender sender) {
-        sender.sendMessage(messageManager.getMessage("commands.help",
-                        "&#FFD93D┌─ &6AntiRedstoneLag &7v{version} ──────┐\n" +
-                                "&6/arl reload &7- Reload configuration and messages\n" +
-                                "&6/arl stats &7- View plugin statistics\n" +
-                                "&6/arl logs &7- View or download logs\n" +
-                                "&6/arl help &7- Show this help message\n" +
-                                "&#FFD93D└────────────────────────────┘")
+        sender.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getHelp())
                 .replaceText(t -> t.matchLiteral("{version}").replacement(plugin.getPluginMeta().getVersion())));
     }
 
@@ -101,19 +95,12 @@ public class CommandHandler implements BasicCommand {
             listener.refreshCache();
         }
 
-        sender.sendMessage(messageManager.getMessage("commands.reload-success", "&#4ECDC4✓ &aConfiguration and messages reloaded successfully!"));
+        sender.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getReloadSuccess()));
         logManager.logToFile("COMMAND", sender.getName() + " executed reload command", null);
     }
 
     private void statsCommand(CommandSender sender) {
-        sender.sendMessage(messageManager.getMessage("commands.stats",
-                        "&#4ECDC4┌─ &bAntiRedstoneLag Statistics &7─┐\n" +
-                                "&7Chunks monitored: &e{chunks}\n" +
-                                "&7Blocks monitored: &e{blocks}\n" +
-                                "&7Total removals: &e{total_removals}\n" +
-                                "&7Removals today: &e{today_removals}\n" +
-                                "&7Performance: &a{performance}%\n" +
-                                "&#4ECDC4└────────────────────────┘")
+        sender.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getStats())
                 .replaceText(t -> t.matchLiteral("{chunks}").replacement(String.valueOf(counterManager.getChunksMonitored())))
                 .replaceText(t -> t.matchLiteral("{blocks}").replacement(String.valueOf(counterManager.getBlocksMonitored())))
                 .replaceText(t -> t.matchLiteral("{total_removals}").replacement(String.valueOf(counterManager.getTotalRemovals())))
@@ -125,11 +112,7 @@ public class CommandHandler implements BasicCommand {
         if (args.length > 1 && args[1].equalsIgnoreCase("download") && sender instanceof Player) {
             provideLogFile((Player) sender);
         } else {
-            sender.sendMessage(messageManager.getMessage("commands.logs-info",
-                            "&#4ECDC4Logging Information:\n" +
-                                    "&7Status: {status}\n" +
-                                    "&7Log folder: &e{folder}\n" +
-                                    "&7Use &6/arl logs download &7to get latest log file")
+            sender.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getLogsInfo())
                     .replaceText(t -> t.matchLiteral("{status}").replacement(logManager.isEnabled() ? "Enabled" : "Disabled"))
                     .replaceText(t -> t.matchLiteral("{folder}").replacement(logManager.getLogsFolder().getAbsolutePath())));
         }
@@ -138,13 +121,13 @@ public class CommandHandler implements BasicCommand {
     private void provideLogFile(Player player) {
         File logsFolder = logManager.getLogsFolder();
         if (logsFolder == null || !logsFolder.exists()) {
-            player.sendMessage(messageManager.getMessage("commands.logs-no-folder", "&#FF6B6B✗ &cLogs folder not found!"));
+            player.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getLogsNoFolder()));
             return;
         }
 
         File[] logFiles = logsFolder.listFiles((dir, name) -> name.startsWith("redstone-logs-") && name.endsWith(".log"));
         if (logFiles == null || logFiles.length == 0) {
-            player.sendMessage(messageManager.getMessage("commands.logs-empty", "&#FF6B6B✗ &cNo log files found!"));
+            player.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getLogsEmpty()));
             return;
         }
 
@@ -155,13 +138,7 @@ public class CommandHandler implements BasicCommand {
         String fileSize = formatFileSize(latestLog.length());
         String lastModified = sdf.format(new Date(latestLog.lastModified()));
 
-        player.sendMessage(messageManager.getMessage("commands.logs-file-info",
-                        "&#4ECDC4┌─ &bLatest Log File &7─┐\n" +
-                                "&7File: &e{filename}\n" +
-                                "&7Size: &e{size}\n" +
-                                "&7Modified: &e{modified}\n" +
-                                "&7Path: &e{path}\n" +
-                                "&#4ECDC4└────────────────────┘")
+        player.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getLogsFileInfo())
                 .replaceText(t -> t.matchLiteral("{filename}").replacement(latestLog.getName()))
                 .replaceText(t -> t.matchLiteral("{size}").replacement(fileSize))
                 .replaceText(t -> t.matchLiteral("{modified}").replacement(lastModified))
@@ -179,7 +156,7 @@ public class CommandHandler implements BasicCommand {
         if (sender.hasPermission(permission)) {
             return true;
         }
-        sender.sendMessage(messageManager.getMessage("commands.no-permission", "&#FF6B6B✗ &cYou don't have permission to use this command!"));
+        sender.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getNoPermission()));
         return false;
     }
 }

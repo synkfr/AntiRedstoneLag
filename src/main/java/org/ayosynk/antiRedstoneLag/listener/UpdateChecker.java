@@ -3,7 +3,6 @@ package org.ayosynk.antiRedstoneLag.listener;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.ayosynk.antiRedstoneLag.AntiRedstoneLag;
 import org.ayosynk.antiRedstoneLag.scheduler.Scheduler;
 import org.bukkit.entity.Player;
@@ -43,8 +42,13 @@ public class UpdateChecker implements Listener {
             if (!currentVersion.equalsIgnoreCase(version)) {
                 latestVersion = version;
                 updateAvailable = true;
-                plugin.getLogger().info("A new version is available: v" + version + " (current: v" + currentVersion + ")");
-                plugin.getLogger().info("Download at: " + projectUrl);
+                String msg = plugin.getMessageManager().getMessagesConfig().getMessages().getUpdateAvailableConsole()
+                        .replace("{version}", version)
+                        .replace("{current}", currentVersion);
+                String download = plugin.getMessageManager().getMessagesConfig().getMessages().getUpdateDownloadConsole()
+                        .replace("{url}", projectUrl);
+                plugin.getLogger().info(msg);
+                plugin.getLogger().info(download);
             }
         });
     }
@@ -75,7 +79,7 @@ public class UpdateChecker implements Listener {
                     }
                 }
             } catch (Exception e) {
-                if (plugin.getConfig().getBoolean("debug", false)) {
+                if (plugin.getConfigManager().isDebugMode()) {
                     plugin.getLogger().warning("Failed to check for updates: " + e.getMessage());
                 }
             }
@@ -91,9 +95,12 @@ public class UpdateChecker implements Listener {
 
         scheduler.runTaskLater(player, () -> {
             if (player.isOnline()) {
-                MiniMessage mm = MiniMessage.miniMessage();
-                player.sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <yellow>A new version is available: <green>v" + latestVersion));
-                player.sendMessage(mm.deserialize("<gold>[AntiRedstoneLag] <gray>Download at: <aqua><click:open_url:'" + projectUrl + "'>" + projectUrl + "</click>"));
+                String playerMsg = plugin.getMessageManager().getMessagesConfig().getMessages().getUpdateAvailablePlayer()
+                        .replace("{version}", latestVersion);
+                String playerDownload = plugin.getMessageManager().getMessagesConfig().getMessages().getUpdateDownloadPlayer()
+                        .replace("{url}", projectUrl);
+                player.sendMessage(plugin.getMessageManager().parseMessage(playerMsg));
+                player.sendMessage(plugin.getMessageManager().parseMessage(playerDownload));
             }
         }, 40L);
     }

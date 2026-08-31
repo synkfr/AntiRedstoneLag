@@ -35,8 +35,6 @@ public class AntiRedstoneLag extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        saveDefaultConfig();
-
         configManager = new ConfigManager(this);
         messageManager = new MessageManager(this);
         logManager = new LogManager(this);
@@ -72,7 +70,9 @@ public class AntiRedstoneLag extends JavaPlugin {
             );
         });
 
-        getLogger().info("AntiRedstoneLag v" + getPluginMeta().getVersion() + " has been enabled!");
+        String enabledMsg = messageManager.getMessagesConfig().getMessages().getEnabled()
+                .replace("{version}", getPluginMeta().getVersion());
+        getServer().getConsoleSender().sendMessage(messageManager.parseMessage(enabledMsg));
 
         updateChecker = new UpdateChecker(this, scheduler, MODRINTH_PROJECT_ID, MODRINTH_PROJECT_URL);
         getServer().getPluginManager().registerEvents(updateChecker, this);
@@ -81,7 +81,10 @@ public class AntiRedstoneLag extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        getLogger().info("AntiRedstoneLag has been disabled!");
+        if (messageManager != null && messageManager.getMessagesConfig() != null) {
+            String disabledMsg = messageManager.getMessagesConfig().getMessages().getDisabled();
+            getServer().getConsoleSender().sendMessage(messageManager.parseMessage(disabledMsg));
+        }
 
         if (counterManager != null) {
             counterManager.saveStats();
@@ -91,6 +94,10 @@ public class AntiRedstoneLag extends JavaPlugin {
             logManager.logToFile("PLUGIN_DISABLED", "Plugin disabled", null);
             logManager.close();
         }
+    }
+
+    public ConfigManager getConfigManager() {
+        return configManager;
     }
 
     public MessageManager getMessageManager() {
