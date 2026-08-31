@@ -196,4 +196,4 @@ In accordance with Modrinth's project disclosure guidelines and content standard
 
 ## License
 
-MIT License - Copyright (c) 2025-2026 AyoSynk & paradoxnafi.
+MIT License - Copyright (c) 2025-2026
