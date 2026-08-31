@@ -42,6 +42,9 @@ public class TabCompleteHandler {
             if ("snapshot".startsWith(partial) && (sender.isOp() || sender.hasPermission("antiredstonelag.snapshot"))) {
                 completions.add("snapshot");
             }
+            if ("clear".startsWith(partial) && (sender.isOp() || sender.hasPermission("antiredstonelag.clear"))) {
+                completions.add("clear");
+            }
             if ("help".startsWith(partial)) {
                 completions.add("help");
             }
@@ -80,6 +83,12 @@ public class TabCompleteHandler {
                         if (snap.id.toLowerCase().startsWith(partial)) {
                             completions.add(snap.id);
                         }
+                    }
+                }
+            } else if ((sub.equals("clear") || sub.equals("clearlagg")) && (sender.isOp() || sender.hasPermission("antiredstonelag.clear"))) {
+                for (String opt : List.of("items", "all", "mobs", "projectiles", "xp", "vehicles", "count", "cancel", "timer")) {
+                    if (opt.startsWith(partial)) {
+                        completions.add(opt);
                     }
                 }
             }

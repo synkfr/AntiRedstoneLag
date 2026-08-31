@@ -9,6 +9,7 @@ import org.ayosynk.antiRedstoneLag.config.ConfigManager;
 import org.ayosynk.antiRedstoneLag.config.MessageManager;
 import org.ayosynk.antiRedstoneLag.listener.RedstoneListener;
 import org.ayosynk.antiRedstoneLag.listener.UpdateChecker;
+import org.ayosynk.antiRedstoneLag.manager.ClearLaggManager;
 import org.ayosynk.antiRedstoneLag.manager.CounterManager;
 import org.ayosynk.antiRedstoneLag.manager.LogManager;
 import org.ayosynk.antiRedstoneLag.manager.MetricsManager;
@@ -30,6 +31,7 @@ public class AntiRedstoneLag extends JavaPlugin {
     private MessageManager messageManager;
     private LogManager logManager;
     private SnapshotManager snapshotManager;
+    private ClearLaggManager clearLaggManager;
     private ConfigManager configManager;
     @SuppressWarnings("unused")
     private MetricsManager metricsManager;
@@ -52,6 +54,7 @@ public class AntiRedstoneLag extends JavaPlugin {
             scheduler = new BukkitSchedulerImpl(this);
         }
 
+        clearLaggManager = new ClearLaggManager(this, configManager, messageManager);
         counterManager = new CounterManager(this, configManager, messageManager, logManager, getDataFolder());
         redstoneListener = new RedstoneListener(counterManager, configManager);
 
@@ -114,6 +117,10 @@ public class AntiRedstoneLag extends JavaPlugin {
 
     public SnapshotManager getSnapshotManager() {
         return snapshotManager;
+    }
+
+    public ClearLaggManager getClearLaggManager() {
+        return clearLaggManager;
     }
 
     public RedstoneListener getRedstoneListener() {

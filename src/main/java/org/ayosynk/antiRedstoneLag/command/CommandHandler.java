@@ -2,6 +2,7 @@ package org.ayosynk.antiRedstoneLag.command;
 
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -10,6 +11,7 @@ import org.ayosynk.antiRedstoneLag.AntiRedstoneLag;
 import org.ayosynk.antiRedstoneLag.config.ConfigManager;
 import org.ayosynk.antiRedstoneLag.config.MessageManager;
 import org.ayosynk.antiRedstoneLag.listener.RedstoneListener;
+import org.ayosynk.antiRedstoneLag.manager.ClearLaggManager;
 import org.ayosynk.antiRedstoneLag.manager.CounterManager;
 import org.ayosynk.antiRedstoneLag.manager.CounterManager.HotspotGroup;
 import org.ayosynk.antiRedstoneLag.manager.LogManager;
@@ -50,6 +52,7 @@ public class CommandHandler implements BasicCommand {
     private final CounterManager counterManager;
     private final TabCompleteHandler tabCompleteHandler;
     private final Map<UUID, Long> activeInspectors = new ConcurrentHashMap<>();
+    private final Map<UUID, BossBar> activeBossBars = new ConcurrentHashMap<>();
 
     public CommandHandler(AntiRedstoneLag plugin, ConfigManager configManager,
                           MessageManager messageManager, LogManager logManager,
@@ -71,8 +74,16 @@ public class CommandHandler implements BasicCommand {
                 UUID uuid = entry.getKey();
                 long expiry = entry.getValue();
                 Player player = Bukkit.getPlayer(uuid);
+                BossBar bossBar = activeBossBars.get(uuid);
+
                 if (player == null || !player.isOnline() || now > expiry) {
                     activeInspectors.remove(uuid);
+                    if (bossBar != null) {
+                        if (player != null && player.isOnline()) {
+                            player.hideBossBar(bossBar);
+                        }
+                        activeBossBars.remove(uuid);
+                    }
                     if (player != null && player.isOnline()) {
                         player.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getInspectDisabled()));
                     }
@@ -83,11 +94,32 @@ public class CommandHandler implements BasicCommand {
                 long chunkKey = CounterManager.packChunk(pLoc.getBlockX() >> 4, pLoc.getBlockZ() >> 4);
                 int chunkUps = counterManager.getChunkUpdates(pLoc.getWorld().getUID(), chunkKey);
                 double mspt = Bukkit.getAverageTickTime();
+                double tps = Bukkit.getTPS()[0];
 
-                player.sendActionBar(MM.deserialize(
-                        "<gold>ARL Inspect <dark_gray>| <yellow>Chunk: <aqua>" + chunkUps + " UPS" +
-                        " <dark_gray>| <yellow>MSPT: <green>" + String.format("%.1f", mspt) + "ms" +
-                        " <dark_gray>| <yellow>TPS: <green>" + String.format("%.1f", Bukkit.getTPS()[0])));
+                BossBar.Color barColor;
+                if (mspt <= 35.0) {
+                    barColor = BossBar.Color.GREEN;
+                } else if (mspt <= 45.0) {
+                    barColor = BossBar.Color.YELLOW;
+                } else {
+                    barColor = BossBar.Color.RED;
+                }
+
+                float progress = (float) Math.min(1.0, Math.max(0.0, mspt / 50.0));
+                Component title = MM.deserialize(
+                        "<gold><b>ARL Inspect</b></gold> <dark_gray>|</dark_gray> <yellow>Chunk:</yellow> <aqua>" + chunkUps + " UPS</aqua>" +
+                        " <dark_gray>|</dark_gray> <yellow>MSPT:</yellow> <green>" + String.format("%.1f", mspt) + "ms</green>" +
+                        " <dark_gray>|</dark_gray> <yellow>TPS:</yellow> <green>" + String.format("%.1f", tps) + "</green>");
+
+                if (bossBar == null) {
+                    bossBar = BossBar.bossBar(title, progress, barColor, BossBar.Overlay.PROGRESS);
+                    activeBossBars.put(uuid, bossBar);
+                    player.showBossBar(bossBar);
+                } else {
+                    bossBar.name(title);
+                    bossBar.progress(progress);
+                    bossBar.color(barColor);
+                }
 
                 player.spawnParticle(Particle.DUST, pLoc.clone().add(0, 0.5, 0), 2, 0.5, 0.5, 0.5,
                         new Particle.DustOptions(Color.fromRGB(78, 205, 196), 1.0f));
@@ -128,6 +160,11 @@ public class CommandHandler implements BasicCommand {
                 if (!hasPermission(sender, "antiredstonelag.snapshot")) return;
                 snapshotCommand(sender, args);
                 break;
+            case "clear":
+            case "clearlagg":
+                if (!hasPermission(sender, "antiredstonelag.clear")) return;
+                clearLaggCommand(sender, args);
+                break;
             case "help":
             default:
                 showHelp(sender);
@@ -148,6 +185,54 @@ public class CommandHandler implements BasicCommand {
     @Override
     public @Nullable String permission() {
         return null;
+    }
+
+    private void clearLaggCommand(CommandSender sender, String[] args) {
+        ClearLaggManager clm = plugin.getClearLaggManager();
+        if (clm == null) return;
+
+        if (args.length == 1) {
+            clm.clearEntities(ClearLaggManager.ClearType.ITEMS);
+            return;
+        }
+
+        String sub = args[1].toLowerCase();
+        switch (sub) {
+            case "all":
+                clm.clearEntities(ClearLaggManager.ClearType.ALL);
+                break;
+            case "items":
+                clm.clearEntities(ClearLaggManager.ClearType.ITEMS);
+                break;
+            case "mobs":
+                clm.clearEntities(ClearLaggManager.ClearType.MOBS);
+                break;
+            case "projectiles":
+                clm.clearEntities(ClearLaggManager.ClearType.PROJECTILES);
+                break;
+            case "xp":
+                clm.clearEntities(ClearLaggManager.ClearType.XP);
+                break;
+            case "vehicles":
+                clm.clearEntities(ClearLaggManager.ClearType.VEHICLES);
+                break;
+            case "cancel":
+                clm.cancelScheduledClear();
+                break;
+            case "timer":
+                sender.sendMessage(MM.deserialize("<gold>[ClearLagg] <yellow>Next scheduled clear in: <aqua>" + clm.getSecondsUntilClear() + "s</aqua>"));
+                break;
+            case "count":
+            default:
+                ClearLaggManager.EntityCounts counts = clm.countEntities();
+                sender.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getClearlagg().getCount())
+                        .replaceText(t -> t.matchLiteral("{items}").replacement(String.valueOf(counts.items)))
+                        .replaceText(t -> t.matchLiteral("{projectiles}").replacement(String.valueOf(counts.projectiles)))
+                        .replaceText(t -> t.matchLiteral("{monsters}").replacement(String.valueOf(counts.monsters)))
+                        .replaceText(t -> t.matchLiteral("{xp_orbs}").replacement(String.valueOf(counts.xpOrbs)))
+                        .replaceText(t -> t.matchLiteral("{vehicles}").replacement(String.valueOf(counts.vehicles))));
+                break;
+        }
     }
 
     private void snapshotCommand(CommandSender sender, String[] args) {
@@ -266,6 +351,10 @@ public class CommandHandler implements BasicCommand {
         UUID uuid = player.getUniqueId();
         if (activeInspectors.containsKey(uuid)) {
             activeInspectors.remove(uuid);
+            BossBar bar = activeBossBars.remove(uuid);
+            if (bar != null) {
+                player.hideBossBar(bar);
+            }
             player.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getInspectDisabled()));
             return;
         }

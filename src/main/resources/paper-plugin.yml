@@ -21,6 +21,7 @@ permissions:
       antiredstonelag.hotspots: true
       antiredstonelag.inspect: true
       antiredstonelag.snapshot: true
+      antiredstonelag.clear: true
       antiredstonelag.admin: true
   antiredstonelag.use:
     description: Use basic plugin commands
@@ -48,6 +49,9 @@ permissions:
     default: op
   antiredstonelag.snapshot:
     description: View and manage forensic lag snapshots
+    default: op
+  antiredstonelag.clear:
+    description: Clear ground items and lag entities
     default: op
   antiredstonelag.admin:
     description: Receive update notifications

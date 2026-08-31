@@ -17,6 +17,9 @@ public class MessagesConfig extends OkaeriConfig {
     @CustomKey("alerts")
     private AlertsSection alerts = new AlertsSection();
 
+    @CustomKey("clearlagg")
+    private ClearLaggSection clearlagg = new ClearLaggSection();
+
     @CustomKey("commands")
     private CommandsSection commands = new CommandsSection();
 
@@ -72,6 +75,63 @@ public class MessagesConfig extends OkaeriConfig {
         }
     }
 
+    public static class ClearLaggSection extends OkaeriConfig {
+        @CustomKey("warning-chat")
+        private String warningChat = "&#FFD93D[ClearLagg] &eGround items & lag entities will be cleared in &c{seconds}s&e!";
+
+        @CustomKey("warning-actionbar")
+        private String warningActionbar = "<gold>ClearLagg <dark_gray>| <yellow>Clearing ground items in <red>{seconds}s</red>!";
+
+        @CustomKey("warning-title")
+        private String warningTitle = "<red>⚡ ClearLagg ⚡</red>";
+
+        @CustomKey("warning-subtitle")
+        private String warningSubtitle = "<yellow>Clearing items in <gold>{seconds}s</gold></yellow>";
+
+        @CustomKey("cleared")
+        private String cleared = "&#4ECDC4✓ &a[ClearLagg] Removed &e{count} &aunclaimed items and entities across all worlds.";
+
+        @CustomKey("cancelled")
+        private String cancelled = "&#FF6B6B[ClearLagg] &cScheduled clear was cancelled.";
+
+        @CustomKey("count")
+        private String count = "&#4ECDC4┌─ &bClearLagg Entity Count &7─┐\n" +
+                "&7Ground items: &e{items}\n" +
+                "&7Projectiles: &e{projectiles}\n" +
+                "&7Monsters: &e{monsters}\n" +
+                "&7XP Orbs: &e{xp_orbs}\n" +
+                "&7Vehicles: &e{vehicles}\n" +
+                "&#4ECDC4└────────────────────────┘";
+
+        public String getWarningChat() {
+            return warningChat;
+        }
+
+        public String getWarningActionbar() {
+            return warningActionbar;
+        }
+
+        public String getWarningTitle() {
+            return warningTitle;
+        }
+
+        public String getWarningSubtitle() {
+            return warningSubtitle;
+        }
+
+        public String getCleared() {
+            return cleared;
+        }
+
+        public String getCancelled() {
+            return cancelled;
+        }
+
+        public String getCount() {
+            return count;
+        }
+    }
+
     public static class CommandsSection extends OkaeriConfig {
         @CustomKey("reload-success")
         private String reloadSuccess = "&#4ECDC4✓ &aConfiguration and messages reloaded successfully!";
@@ -118,7 +178,7 @@ public class MessagesConfig extends OkaeriConfig {
         private String hotspotsExported = "&#4ECDC4✓ &aHotspot map exported to: &e{path}";
 
         @CustomKey("inspect-enabled")
-        private String inspectEnabled = "&#4ECDC4✓ &aReal-time redstone inspector enabled for &e{duration}s&a! Particles show active components.";
+        private String inspectEnabled = "&#4ECDC4✓ &aReal-time BossBar redstone inspector enabled for &e{duration}s&a!";
 
         @CustomKey("inspect-disabled")
         private String inspectDisabled = "&#FF6B6B✗ &cReal-time redstone inspector disabled.";
@@ -144,8 +204,9 @@ public class MessagesConfig extends OkaeriConfig {
                 "&6/arl stats     &7- View plugin statistics\n" +
                 "&6/arl logs      &7- View or download logs\n" +
                 "&6/arl hotspots  &7- View top redstone hotspots\n" +
-                "&6/arl inspect   &7- Toggle real-time redstone HUD\n" +
+                "&6/arl inspect   &7- Toggle real-time BossBar inspector\n" +
                 "&6/arl snapshot  &7- View forensic lag snapshots\n" +
+                "&6/arl clear     &7- Clear ground items and lag entities\n" +
                 "&6/arl help      &7- Show this help message\n" +
                 "&#FFD93D└──────────────────────────────────────┘";
 
@@ -275,6 +336,10 @@ public class MessagesConfig extends OkaeriConfig {
 
     public AlertsSection getAlerts() {
         return alerts;
+    }
+
+    public ClearLaggSection getClearlagg() {
+        return clearlagg;
     }
 
     public CommandsSection getCommands() {

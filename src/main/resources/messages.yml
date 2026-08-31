@@ -15,6 +15,22 @@ alerts:
     &#FF6B6B└─ &7Removed for server performance ─┘
   redstone-warning: "&#FFD93D⚠ &eWarning: &7Redstone activity at &e{x}, {y}, {z} &7is at &c{percent}% &7of threshold!"
 
+clearlagg:
+  warning-chat: "&#FFD93D[ClearLagg] &eGround items & lag entities will be cleared in &c{seconds}s&e!"
+  warning-actionbar: "<gold>ClearLagg <dark_gray>| <yellow>Clearing ground items in <red>{seconds}s</red>!"
+  warning-title: "<red>⚡ ClearLagg ⚡</red>"
+  warning-subtitle: "<yellow>Clearing items in <gold>{seconds}s</gold></yellow>"
+  cleared: "&#4ECDC4✓ &a[ClearLagg] Removed &e{count} &aunclaimed items and entities across all worlds."
+  cancelled: "&#FF6B6B[ClearLagg] &cScheduled clear was cancelled."
+  count: |-
+    &#4ECDC4┌─ &bClearLagg Entity Count &7─┐
+    &7Ground items: &e{items}
+    &7Projectiles: &e{projectiles}
+    &7Monsters: &e{monsters}
+    &7XP Orbs: &e{xp_orbs}
+    &7Vehicles: &e{vehicles}
+    &#4ECDC4└────────────────────────┘
+
 commands:
   reload-success: "&#4ECDC4✓ &aConfiguration and messages reloaded successfully!"
   stats: |-
@@ -43,9 +59,12 @@ commands:
   hotspots-header: "&#4ECDC4┌─ &bRedstone Hotspots &7({count} clusters) ───┐"
   hotspots-none: "&#4ECDC4✓ &aNo active redstone hotspots detected!"
   hotspots-exported: "&#4ECDC4✓ &aHotspot map exported to: &e{path}"
-  inspect-enabled: "&#4ECDC4✓ &aReal-time redstone inspector enabled for &e{duration}s&a! Particles show active components."
+  inspect-enabled: "&#4ECDC4✓ &aReal-time BossBar redstone inspector enabled for &e{duration}s&a!"
   inspect-disabled: "&#FF6B6B✗ &cReal-time redstone inspector disabled."
-  inspect-actionbar: "<gold>ARL Inspect <dark_gray>| <yellow>Chunk: <aqua>{chunk_ups} UPS <dark_gray>| <yellow>Top Block: <red>{block_ups} UPS <gray>({material})"
+  snapshot-captured: "&#FF6B6B[ARL Snapshot] &cCaptured forensic snapshot &e{id}&c for &6{material}&c at &e{x}, {y}, {z}&c! &7(Culprit: &e{culprit}&7)"
+  snapshot-empty: "&#4ECDC4✓ &aNo forensic snapshots recorded yet."
+  snapshot-cleared: "&#4ECDC4✓ &aAll forensic snapshots cleared."
+  snapshot-not-found: "&#FF6B6B✗ &cSnapshot not found: &e{id}"
   no-permission: "&#FF6B6B✗ &cYou don't have permission to use this command!"
   help: |-
     &#FFD93D┌─ &6AntiRedstoneLag &7v{version} ──────────┐
@@ -53,7 +72,9 @@ commands:
     &6/arl stats     &7- View plugin statistics
     &6/arl logs      &7- View or download logs
     &6/arl hotspots  &7- View top redstone hotspots
-    &6/arl inspect   &7- Toggle real-time redstone HUD & particles
+    &6/arl inspect   &7- Toggle real-time BossBar inspector
+    &6/arl snapshot  &7- View forensic lag snapshots
+    &6/arl clear     &7- Clear ground items and lag entities
     &6/arl help      &7- Show this help message
     &#FFD93D└──────────────────────────────────────┘
 

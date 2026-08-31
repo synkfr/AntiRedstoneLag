@@ -20,6 +20,76 @@ debug: false
 # Options: FREEZE (temporarily pause clock), DISABLE (cancel signal), DROP (break and drop item), REMOVE (set to air)
 removal-action: FREEZE
 
+# High-performance ground item & entity cleaner with countdown broadcasts
+clearlagg:
+  enabled: true
+  # Automatic clear interval in seconds (300 = 5 minutes, 0 = disabled)
+  interval-seconds: 300
+  # Seconds before clear to broadcast countdown warnings
+  countdown-seconds:
+    - 60
+    - 30
+    - 10
+    - 5
+    - 4
+    - 3
+    - 2
+    - 1
+  # Broadcast display type: CHAT, ACTION_BAR, TITLE, SUBTITLE, ALL, NONE
+  broadcast-mode: CHAT
+  clear-ground-items: true
+  # Clear arrows, tridents, and projectiles stuck on the ground
+  clear-projectiles: true
+  # Clear hostile monsters without name tags
+  clear-unnamed-monsters: false
+  clear-xp-orbs: false
+  clear-boats-minecarts: false
+  exempt-named-mobs: true
+  exempt-tamed-animals: true
+  exempt-leashed-mobs: true
+  # Items that will NEVER be cleared when dropped on ground
+  item-blacklist:
+    - NETHER_STAR
+    - BEACON
+    - TOTEM_OF_UNDYING
+    - ELYTRA
+    - DIAMOND
+    - DIAMOND_BLOCK
+    - NETHERITE_INGOT
+    - NETHERITE_BLOCK
+    - NETHERITE_SWORD
+    - NETHERITE_PICKAXE
+    - NETHERITE_AXE
+    - NETHERITE_SHOVEL
+    - NETHERITE_HOE
+    - NETHERITE_HELMET
+    - NETHERITE_CHESTPLATE
+    - NETHERITE_LEGGINGS
+    - NETHERITE_BOOTS
+  # Entities that are 100% immune from clearing (SMP safe)
+  entity-whitelist:
+    - VILLAGER
+    - IRON_GOLEM
+    - ALLAY
+    - ARMOR_STAND
+    - ITEM_FRAME
+    - GLOW_ITEM_FRAME
+    - PAINTING
+    - LEASH_KNOT
+    - INTERACTION
+    - TEXT_DISPLAY
+    - BLOCK_DISPLAY
+    - ITEM_DISPLAY
+  # Emergency auto-clear when server TPS drops below this value (0.0 to disable)
+  tps-emergency-threshold: 0.0
+
+# Forensic snapshot system - records 3D structure and culprit metadata when lag machines are detected
+snapshot:
+  enabled: true
+  radius: 3
+  max-snapshots: 25
+  save-to-disk: true
+
 # Non-destructive freezing system - temporarily pauses clocks before escalating
 freeze:
   enabled: true
