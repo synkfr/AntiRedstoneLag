@@ -142,12 +142,12 @@ public class CommandHandler implements BasicCommand {
 
     @Override
     public boolean canUse(CommandSender sender) {
-        return sender.hasPermission("antiredstonelag.use");
+        return true;
     }
 
     @Override
     public @Nullable String permission() {
-        return "antiredstonelag.use";
+        return null;
     }
 
     private void snapshotCommand(CommandSender sender, String[] args) {
@@ -507,7 +507,7 @@ public class CommandHandler implements BasicCommand {
     }
 
     private boolean hasPermission(CommandSender sender, String permission) {
-        if (sender.hasPermission(permission)) {
+        if (sender.isOp() || sender.hasPermission(permission)) {
             return true;
         }
         sender.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getNoPermission()));

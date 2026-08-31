@@ -12,14 +12,19 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MessageManager {
+    private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
+    private static final Pattern LEGACY_HEX_PATTERN = Pattern.compile("&x(&[A-Fa-f0-9]){6}");
+
     private final JavaPlugin plugin;
     private MessagesConfig messagesConfig;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final LegacyComponentSerializer legacySerializer = LegacyComponentSerializer.builder()
             .character('&')
-            .hexCharacter('#')
+            .hexColors()
             .extractUrls()
             .build();
 
@@ -65,10 +70,52 @@ public class MessageManager {
 
     public Component parseMessage(String message) {
         if (message == null || message.isEmpty()) return Component.empty();
-        if (message.contains("&") || message.contains("§")) {
-            return legacySerializer.deserialize(message.replace("&#", "#"));
+
+        String formatted = message;
+        if (formatted.contains("&#")) {
+            Matcher matcher = HEX_PATTERN.matcher(formatted);
+            StringBuilder sb = new StringBuilder();
+            while (matcher.find()) {
+                String hex = matcher.group(1);
+                matcher.appendReplacement(sb, "<#" + hex + ">");
+            }
+            matcher.appendTail(sb);
+            formatted = sb.toString();
         }
-        return miniMessage.deserialize(message);
+
+        if (formatted.contains("<") && formatted.contains(">")) {
+            formatted = legacyToMiniMessage(formatted);
+            try {
+                return miniMessage.deserialize(formatted);
+            } catch (Exception ignored) {
+            }
+        }
+
+        return legacySerializer.deserialize(message);
+    }
+
+    private String legacyToMiniMessage(String input) {
+        return input.replace("&0", "<black>")
+                    .replace("&1", "<dark_blue>")
+                    .replace("&2", "<dark_green>")
+                    .replace("&3", "<dark_aqua>")
+                    .replace("&4", "<dark_red>")
+                    .replace("&5", "<dark_purple>")
+                    .replace("&6", "<gold>")
+                    .replace("&7", "<gray>")
+                    .replace("&8", "<dark_gray>")
+                    .replace("&9", "<blue>")
+                    .replace("&a", "<green>")
+                    .replace("&b", "<aqua>")
+                    .replace("&c", "<red>")
+                    .replace("&d", "<light_purple>")
+                    .replace("&e", "<yellow>")
+                    .replace("&f", "<white>")
+                    .replace("&l", "<bold>")
+                    .replace("&m", "<strikethrough>")
+                    .replace("&n", "<underlined>")
+                    .replace("&o", "<italic>")
+                    .replace("&r", "<reset>");
     }
 
     public String getMessageString(String message) {

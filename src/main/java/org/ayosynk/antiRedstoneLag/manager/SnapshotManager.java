@@ -24,9 +24,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SnapshotManager {
+    private static final long SNAPSHOT_COOLDOWN_MS = 60000L;
+
     public static class BlockEntry {
         public final int relX, relY, relZ;
         public final Material material;
@@ -88,6 +91,7 @@ public class SnapshotManager {
     private final ConfigManager configManager;
     private final MessageManager messageManager;
     private final Map<String, Snapshot> snapshots = Collections.synchronizedMap(new LinkedHashMap<>());
+    private final Map<Long, Long> snapshotCooldowns = new ConcurrentHashMap<>();
     private final AtomicInteger snapshotCounter = new AtomicInteger(1);
     private final File snapshotDir;
 
@@ -103,20 +107,33 @@ public class SnapshotManager {
         if (!configManager.getPluginConfig().getSnapshot().isEnabled()) return null;
         if (centerBlock == null || centerBlock.getWorld() == null) return null;
 
-        World world = centerBlock.getWorld();
         int centerX = centerBlock.getX();
         int centerY = centerBlock.getY();
         int centerZ = centerBlock.getZ();
-        int radius = configManager.getPluginConfig().getSnapshot().getRadius();
+        long blockKey = CounterManager.packBlock(centerX, centerY, centerZ);
 
-        String snapshotId = "SNP-" + snapshotCounter.getAndIncrement();
         long now = System.currentTimeMillis();
+        Long lastSnap = snapshotCooldowns.get(blockKey);
+        if (lastSnap != null && now - lastSnap < SNAPSHOT_COOLDOWN_MS) {
+            return null;
+        }
+        snapshotCooldowns.put(blockKey, now);
+
+        World world = centerBlock.getWorld();
+        int radius = configManager.getPluginConfig().getSnapshot().getRadius();
+        String snapshotId = "SNP-" + snapshotCounter.getAndIncrement();
 
         String culpritName = "Unknown";
         if (culpritUuid != null) {
             OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(culpritUuid);
             if (offlinePlayer.getName() != null) {
                 culpritName = offlinePlayer.getName();
+            }
+        } else {
+            Player nearest = findNearestPlayer(world, centerX, centerY, centerZ, 48);
+            if (nearest != null) {
+                culpritUuid = nearest.getUniqueId();
+                culpritName = nearest.getName() + " (Nearby)";
             }
         }
 
@@ -185,6 +202,25 @@ public class SnapshotManager {
         return snapshot;
     }
 
+    private Player findNearestPlayer(World world, int x, int y, int z, double maxDistance) {
+        double maxDistSq = maxDistance * maxDistance;
+        Player nearest = null;
+        double nearestDistSq = Double.MAX_VALUE;
+
+        for (Player player : world.getPlayers()) {
+            Location loc = player.getLocation();
+            double dx = loc.getX() - x;
+            double dy = loc.getY() - y;
+            double dz = loc.getZ() - z;
+            double distSq = dx * dx + dy * dy + dz * dz;
+            if (distSq <= maxDistSq && distSq < nearestDistSq) {
+                nearest = player;
+                nearestDistSq = distSq;
+            }
+        }
+        return nearest;
+    }
+
     private void saveSnapshotToDisk(Snapshot snap) {
         if (!snapshotDir.exists()) {
             snapshotDir.mkdirs();
@@ -241,5 +277,6 @@ public class SnapshotManager {
         synchronized (snapshots) {
             snapshots.clear();
         }
+        snapshotCooldowns.clear();
     }
 }

@@ -52,9 +52,9 @@ public class CounterManager {
         }
     }
 
-    private static final long ALERT_COOLDOWN_MS = 1000;
-    private static final long WARNING_COOLDOWN_MS = 5000;
-    private static final long DAY_MS = 24L * 60 * 60 * 1000;
+    private static final long ALERT_COOLDOWN_MS = 5000L;
+    private static final long WARNING_COOLDOWN_MS = 15000L;
+    private static final long DAY_MS = 24L * 60 * 60 * 1000L;
 
     private final AntiRedstoneLag plugin;
     private final ConfigManager configManager;
@@ -65,6 +65,7 @@ public class CounterManager {
     private final Map<UUID, Long2LongOpenHashMap> chunkLockdowns = new ConcurrentHashMap<>();
     private final Map<UUID, Long2LongOpenHashMap> frozenBlocks = new ConcurrentHashMap<>();
     private final Map<UUID, Long2IntOpenHashMap> freezeViolations = new ConcurrentHashMap<>();
+    private final Map<UUID, Long2IntOpenHashMap> sustainedViolations = new ConcurrentHashMap<>();
     private final Map<UUID, Long2LongOpenHashMap> lastPulseTimes = new ConcurrentHashMap<>();
     private final Map<UUID, Long2LongOpenHashMap> lastPulseDeltas = new ConcurrentHashMap<>();
 
@@ -156,6 +157,16 @@ public class CounterManager {
             int blockThreshold = (int) Math.max(1, configManager.getBlockThreshold() * multiplier);
 
             if (chunkVal > chunkThreshold && blockVal > blockThreshold) {
+                int sustained;
+                synchronized (freezeLock) {
+                    Long2IntOpenHashMap sMap = sustainedViolations.computeIfAbsent(worldId, k -> new Long2IntOpenHashMap());
+                    sustained = sMap.addTo(blockKey, 1) + 1;
+                }
+
+                if (sustained < 2 && blockVal < blockThreshold * 3) {
+                    return EVENT_NONE;
+                }
+
                 PluginConfig.RemovalAction action = configManager.getPluginConfig().getRemovalAction();
                 if (action == PluginConfig.RemovalAction.FREEZE) {
                     int violations;
@@ -396,6 +407,7 @@ public class CounterManager {
             removalsToday.set(0);
             synchronized (freezeLock) {
                 freezeViolations.values().forEach(Long2IntOpenHashMap::clear);
+                sustainedViolations.values().forEach(Long2IntOpenHashMap::clear);
             }
             lastResetTime = System.currentTimeMillis();
             saveStats();

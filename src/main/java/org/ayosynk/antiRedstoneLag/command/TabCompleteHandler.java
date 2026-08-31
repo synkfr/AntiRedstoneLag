@@ -22,24 +22,24 @@ public class TabCompleteHandler {
     public List<String> onTabComplete(CommandSender sender, String[] args) {
         List<String> completions = new ArrayList<>();
 
-        if (args.length == 1) {
-            String partial = args[0].toLowerCase();
-            if ("reload".startsWith(partial) && sender.hasPermission("antiredstonelag.reload")) {
+        if (args == null || args.length == 0 || args.length == 1) {
+            String partial = (args != null && args.length > 0) ? args[0].toLowerCase() : "";
+            if ("reload".startsWith(partial) && (sender.isOp() || sender.hasPermission("antiredstonelag.reload"))) {
                 completions.add("reload");
             }
-            if ("stats".startsWith(partial) && sender.hasPermission("antiredstonelag.stats")) {
+            if ("stats".startsWith(partial) && (sender.isOp() || sender.hasPermission("antiredstonelag.stats"))) {
                 completions.add("stats");
             }
-            if ("logs".startsWith(partial) && sender.hasPermission("antiredstonelag.logs")) {
+            if ("logs".startsWith(partial) && (sender.isOp() || sender.hasPermission("antiredstonelag.logs"))) {
                 completions.add("logs");
             }
-            if ("hotspots".startsWith(partial) && sender.hasPermission("antiredstonelag.hotspots")) {
+            if ("hotspots".startsWith(partial) && (sender.isOp() || sender.hasPermission("antiredstonelag.hotspots"))) {
                 completions.add("hotspots");
             }
-            if ("inspect".startsWith(partial) && sender.hasPermission("antiredstonelag.inspect")) {
+            if ("inspect".startsWith(partial) && (sender.isOp() || sender.hasPermission("antiredstonelag.inspect"))) {
                 completions.add("inspect");
             }
-            if ("snapshot".startsWith(partial) && sender.hasPermission("antiredstonelag.snapshot")) {
+            if ("snapshot".startsWith(partial) && (sender.isOp() || sender.hasPermission("antiredstonelag.snapshot"))) {
                 completions.add("snapshot");
             }
             if ("help".startsWith(partial)) {
@@ -50,11 +50,11 @@ public class TabCompleteHandler {
             String sub = args[0].toLowerCase();
             String partial = args[1].toLowerCase();
 
-            if (sub.equals("logs") && sender.hasPermission("antiredstonelag.logs")) {
+            if (sub.equals("logs") && (sender.isOp() || sender.hasPermission("antiredstonelag.logs"))) {
                 if ("download".startsWith(partial)) {
                     completions.add("download");
                 }
-            } else if (sub.equals("hotspots") && sender.hasPermission("antiredstonelag.hotspots")) {
+            } else if (sub.equals("hotspots") && (sender.isOp() || sender.hasPermission("antiredstonelag.hotspots"))) {
                 if ("export".startsWith(partial)) {
                     completions.add("export");
                 }
@@ -63,13 +63,13 @@ public class TabCompleteHandler {
                         completions.add(String.valueOf(p));
                     }
                 }
-            } else if (sub.equals("inspect") && sender.hasPermission("antiredstonelag.inspect")) {
+            } else if (sub.equals("inspect") && (sender.isOp() || sender.hasPermission("antiredstonelag.inspect"))) {
                 for (String s : List.of("15", "30", "60", "120")) {
                     if (s.startsWith(partial)) {
                         completions.add(s);
                     }
                 }
-            } else if (sub.equals("snapshot") && sender.hasPermission("antiredstonelag.snapshot")) {
+            } else if (sub.equals("snapshot") && (sender.isOp() || sender.hasPermission("antiredstonelag.snapshot"))) {
                 for (String opt : List.of("list", "view", "tp", "clear")) {
                     if (opt.startsWith(partial)) {
                         completions.add(opt);
@@ -88,7 +88,7 @@ public class TabCompleteHandler {
             String action = args[1].toLowerCase();
             String partial = args[2].toLowerCase();
 
-            if (sub.equals("snapshot") && (action.equals("view") || action.equals("tp")) && sender.hasPermission("antiredstonelag.snapshot")) {
+            if (sub.equals("snapshot") && (action.equals("view") || action.equals("tp")) && (sender.isOp() || sender.hasPermission("antiredstonelag.snapshot"))) {
                 if (plugin != null && plugin.getSnapshotManager() != null) {
                     for (SnapshotManager.Snapshot snap : plugin.getSnapshotManager().getSnapshots()) {
                         if (snap.id.toLowerCase().startsWith(partial)) {
