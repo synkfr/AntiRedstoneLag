@@ -1,18 +1,12 @@
 name: AntiRedstoneLag
-version: '2.1.0'
+version: '${project.version}'
 main: org.ayosynk.antiRedstoneLag.AntiRedstoneLag
 api-version: '1.21'
 description: Premium redstone lag prevention system with advanced monitoring
-author: AyoSynk
-website: https://yourwebsite.com
+authors:
+  - AyoSynk
+website: https://modrinth.com/plugin/antiredstonelag
 folia-supported: true
-depend: []
-softdepend: []
-commands:
-  arl:
-    description: Main AntiRedstoneLag command
-    permission: antiredstonelag.use
-    usage: /<command> [reload|stats|logs|help]
 permissions:
   antiredstonelag.*:
     description: All AntiRedstoneLag permissions
@@ -24,6 +18,7 @@ permissions:
       antiredstonelag.logs: true
       antiredstonelag.alerts: true
       antiredstonelag.bypass: true
+      antiredstonelag.admin: true
   antiredstonelag.use:
     description: Use basic plugin commands
     default: true
@@ -42,3 +37,6 @@ permissions:
   antiredstonelag.bypass:
     description: Bypass redstone limits
     default: false
+  antiredstonelag.admin:
+    description: Receive update notifications
+    default: op

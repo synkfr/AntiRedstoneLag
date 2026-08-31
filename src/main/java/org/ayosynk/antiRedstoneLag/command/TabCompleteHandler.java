@@ -1,16 +1,13 @@
 package org.ayosynk.antiRedstoneLag.command;
 
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class TabCompleteHandler implements TabCompleter {
+public class TabCompleteHandler {
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    public List<String> onTabComplete(CommandSender sender, String[] args) {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {

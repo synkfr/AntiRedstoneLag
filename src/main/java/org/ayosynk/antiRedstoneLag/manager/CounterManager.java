@@ -1,6 +1,5 @@
 package org.ayosynk.antiRedstoneLag.manager;
 
-import org.ayosynk.antiRedstoneLag.AntiRedstoneLag;
 import org.ayosynk.antiRedstoneLag.config.ConfigManager;
 import org.ayosynk.antiRedstoneLag.config.MessageManager;
 
@@ -20,36 +19,27 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 
-/**
- * Manages redstone update counters per chunk and block.
- * Tracks statistics and handles alerts when thresholds are exceeded.
- */
 public class CounterManager {
-    private final AntiRedstoneLag plugin;
-    private static final long ALERT_COOLDOWN_MS = 1000; // 1 second cooldown between alerts
-    private static final long WARNING_COOLDOWN_MS = 5000; // 5 second cooldown between warnings
+    private static final long ALERT_COOLDOWN_MS = 1000;
+    private static final long WARNING_COOLDOWN_MS = 5000;
     private static final long DAY_MS = 24 * 60 * 60 * 1000;
 
-    // Using fastutil primitive collections to reduce boxing overhead
-    // Object2IntOpenHashMap stores int primitives directly, avoiding AtomicInteger allocation
     private final Object2IntOpenHashMap<String> chunkCounters = new Object2IntOpenHashMap<>();
     private final Object2IntOpenHashMap<String> blockCounters = new Object2IntOpenHashMap<>();
-    private final Map<String, Long> warnedPlayers = new ConcurrentHashMap<>(); // Track warned players
-    private final Object counterLock = new Object(); // Lock for thread-safe counter access
+    private final Map<String, Long> warnedPlayers = new ConcurrentHashMap<>();
+    private final Object counterLock = new Object();
     private final ConfigManager configManager;
     private final MessageManager messageManager;
     private final LogManager logManager;
     private final File statsFile;
 
-    // Statistics
     private final AtomicInteger totalRemovals = new AtomicInteger(0);
     private final AtomicInteger removalsToday = new AtomicInteger(0);
     private final AtomicLong lastAlertTime = new AtomicLong(0);
     private final AtomicLong lastWarningTime = new AtomicLong(0);
     private volatile long lastResetTime = System.currentTimeMillis();
 
-    public CounterManager(AntiRedstoneLag plugin, ConfigManager configManager, MessageManager messageManager, LogManager logManager, File dataFolder) {
-        this.plugin = plugin;
+    public CounterManager(ConfigManager configManager, MessageManager messageManager, LogManager logManager, File dataFolder) {
         this.configManager = configManager;
         this.messageManager = messageManager;
         this.logManager = logManager;
@@ -57,10 +47,6 @@ public class CounterManager {
         loadStats();
     }
 
-    /**
-     * Increment counters using pre-computed keys (avoids object allocation).
-     * Uses fastutil primitive int map to avoid boxing overhead.
-     */
     public void incrementCounters(String chunkKey, String blockKey) {
         if (chunkKey == null || blockKey == null) return;
         synchronized (counterLock) {
@@ -69,9 +55,6 @@ public class CounterManager {
         }
     }
 
-    /**
-     * Check if redstone should be disabled using pre-computed keys.
-     */
     public boolean shouldDisable(String chunkKey, String blockKey) {
         if (chunkKey == null || blockKey == null) return false;
         synchronized (counterLock) {
@@ -82,9 +65,6 @@ public class CounterManager {
         }
     }
 
-    /**
-     * Check if warning should be sent (approaching threshold).
-     */
     public boolean shouldWarn(String chunkKey, String blockKey) {
         if (!configManager.isWarningEnabled()) return false;
         if (chunkKey == null || blockKey == null) return false;
@@ -98,14 +78,10 @@ public class CounterManager {
         }
     }
 
-    /**
-     * Send warning to nearby players about approaching threshold.
-     */
     public void sendWarning(Location location, Material material, java.util.UUID ownerUuid) {
         if (location == null || location.getWorld() == null) return;
         if (!canSendWarning()) return;
 
-        // Get current counts for the warning message
         String chunkKey = location.getWorld().getName() + ":" + (location.getBlockX() >> 4) + ":" + (location.getBlockZ() >> 4);
         int currentCount;
         synchronized (counterLock) {
@@ -114,15 +90,13 @@ public class CounterManager {
         int threshold = configManager.getChunkThreshold();
         int percent = (currentCount * 100) / threshold;
 
-        // Send to block owner if online
         if (ownerUuid != null) {
             Player owner = Bukkit.getPlayer(ownerUuid);
             if (owner != null && owner.isOnline()) {
-                // Check cooldown per player
                 Long lastWarned = warnedPlayers.get(ownerUuid.toString());
                 long now = System.currentTimeMillis();
                 if (lastWarned == null || now - lastWarned >= WARNING_COOLDOWN_MS) {
-                    plugin.adventure().player(owner).sendMessage(messageManager.getMessage("alerts.redstone-warning",
+                    owner.sendMessage(messageManager.getMessage("alerts.redstone-warning",
                                     "&#FFD93D⚠ &eWarning: &7Redstone activity at &e{x}, {y}, {z} &7is at &c{percent}% &7of threshold!")
                             .replaceText(t -> t.matchLiteral("{x}").replacement(String.valueOf(location.getBlockX())))
                             .replaceText(t -> t.matchLiteral("{y}").replacement(String.valueOf(location.getBlockY())))
@@ -148,7 +122,6 @@ public class CounterManager {
     }
 
     public void resetCounters() {
-        // Log performance stats before resetting
         if (configManager.isLogPerformance()) {
             logPerformanceStats();
         }
@@ -158,10 +131,8 @@ public class CounterManager {
             blockCounters.clear();
         }
 
-        // Clear per-player warning cooldowns to prevent memory leak
         warnedPlayers.clear();
 
-        // Reset daily counter if it's a new day
         if (System.currentTimeMillis() - lastResetTime > DAY_MS) {
             removalsToday.set(0);
             lastResetTime = System.currentTimeMillis();
@@ -183,10 +154,8 @@ public class CounterManager {
         totalRemovals.incrementAndGet();
         removalsToday.incrementAndGet();
 
-        // Log the removal
         logManager.logRedstoneRemoval(location, material, chunkCount, blockCount, "Exceeded thresholds");
 
-        // Send alert if enabled (with cooldown to prevent spam)
         if (configManager.isAlertsEnabled() && canSendAlert()) {
             sendAlert(location, material, chunkCount, blockCount);
         }
@@ -213,16 +182,14 @@ public class CounterManager {
                 .replaceText(t -> t.matchLiteral("{chunk_count}").replacement(String.valueOf(chunkCount)))
                 .replaceText(t -> t.matchLiteral("{block_count}").replacement(String.valueOf(blockCount)));
 
-        // Send to all players with permission
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (player.hasPermission("antiredstonelag.alerts")) {
-                plugin.adventure().player(player).sendMessage(alertComponent);
+                player.sendMessage(alertComponent);
             }
         }
 
-        // Also log to console if enabled
         if (configManager.isLogToConsole()) {
-            plugin.adventure().console().sendMessage(alertComponent);
+            Bukkit.getConsoleSender().sendMessage(alertComponent);
         }
     }
 
@@ -237,7 +204,6 @@ public class CounterManager {
         logManager.logPerformanceStats(chunksMonitored, blocksMonitored, avgUpdates);
     }
 
-    // Statistics getters
     public int getTotalRemovals() {
         return totalRemovals.get();
     }
@@ -258,10 +224,6 @@ public class CounterManager {
         }
     }
 
-
-    /**
-     * Load statistics from file.
-     */
     private void loadStats() {
         if (!statsFile.exists()) return;
 
@@ -271,7 +233,6 @@ public class CounterManager {
             removalsToday.set(config.getInt("removals-today", 0));
             lastResetTime = config.getLong("last-reset-time", System.currentTimeMillis());
 
-            // Check if we need to reset daily counter
             if (System.currentTimeMillis() - lastResetTime > DAY_MS) {
                 removalsToday.set(0);
                 lastResetTime = System.currentTimeMillis();
@@ -281,9 +242,6 @@ public class CounterManager {
         }
     }
 
-    /**
-     * Save statistics to file.
-     */
     public void saveStats() {
         try {
             YamlConfiguration config = new YamlConfiguration();
