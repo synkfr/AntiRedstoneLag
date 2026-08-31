@@ -1,44 +1,30 @@
 package org.ayosynk.antiRedstoneLag.config;
 
-import org.ayosynk.antiRedstoneLag.AntiRedstoneLag;
-
+import eu.okaeri.configs.serdes.commons.SerdesCommons;
+import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
+import eu.okaeri.configs.yaml.snakeyaml.YamlSnakeYamlConfigurer;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-/**
- * Manages plugin configuration loaded from config.yml.
- * Provides access to all configurable settings with validation.
- */
 public class ConfigManager {
-    /**
-     * Removal action options for redstone that exceeds thresholds.
-     */
     public enum RemovalAction {
-        REMOVE,  // Set block to air
-        DISABLE, // Cancel the redstone signal (don't remove block)
-        DROP     // Break block and drop item
+        REMOVE,
+        DISABLE,
+        DROP
     }
 
     private final JavaPlugin plugin;
-    private int chunkThreshold;
-    private int blockThreshold;
-    private boolean alertsEnabled;
-    private boolean logToConsole;
-    private boolean logPerformance;
-    private boolean debugMode;
-    private int resetInterval;
-    private RemovalAction removalAction;
-    private boolean warningEnabled;
-    private int warningThresholdPercent;
-    private boolean whitelistEnabled;
-    private Set<String> whitelistedChunks;
-    private Set<String> enabledWorlds;
+    private PluginConfig pluginConfig;
     private Set<Material> redstoneMaterials;
+    private Set<String> enabledWorlds;
+    private Set<String> whitelistedChunks;
 
     public ConfigManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -46,76 +32,65 @@ public class ConfigManager {
     }
 
     public void reloadConfig() {
-        plugin.reloadConfig();
-        FileConfiguration config = plugin.getConfig();
+        if (!plugin.getDataFolder().exists()) {
+            plugin.getDataFolder().mkdirs();
+        }
 
-        chunkThreshold = Math.max(1, config.getInt("chunk-threshold", 500));
-        blockThreshold = Math.max(1, config.getInt("block-threshold", 15));
-        alertsEnabled = config.getBoolean("alerts.enabled", true);
-        logToConsole = config.getBoolean("alerts.log-to-console", true);
-        logPerformance = config.getBoolean("logging.performance-stats", true);
-        debugMode = config.getBoolean("debug", false);
-        resetInterval = Math.max(1, config.getInt("reset-interval-ticks", 20));
+        File configFile = new File(plugin.getDataFolder(), "config.yml");
+        handleBackup(configFile);
 
-        // Parse removal action
-        String actionStr = config.getString("removal-action", "REMOVE").toUpperCase();
+        this.pluginConfig = eu.okaeri.configs.ConfigManager.create(PluginConfig.class, it -> {
+            it.withConfigurer(new YamlSnakeYamlConfigurer(), new SerdesBukkit(), new SerdesCommons());
+            it.withBindFile(configFile);
+            it.withRemoveOrphans(true);
+            it.saveDefaults();
+            it.load(true);
+        });
+
+        this.redstoneMaterials = new HashSet<>(pluginConfig.getRedstoneComponents());
+        this.enabledWorlds = new HashSet<>(pluginConfig.getEnabledWorlds());
+        if (this.enabledWorlds.isEmpty()) {
+            this.enabledWorlds.add("*");
+        }
+        this.whitelistedChunks = new HashSet<>(pluginConfig.getWhitelist().getChunks());
+    }
+
+    private void handleBackup(File file) {
+        if (!file.exists()) return;
         try {
-            removalAction = RemovalAction.valueOf(actionStr);
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("Invalid removal-action '" + actionStr + "', defaulting to REMOVE");
-            removalAction = RemovalAction.REMOVE;
-        }
-
-        // Warning system
-        warningEnabled = config.getBoolean("warning.enabled", true);
-        warningThresholdPercent = Math.max(1, Math.min(99, config.getInt("warning.threshold-percent", 80)));
-
-        // Whitelist mode
-        whitelistEnabled = config.getBoolean("whitelist.enabled", false);
-        whitelistedChunks = new HashSet<>(config.getStringList("whitelist.chunks"));
-
-        if (debugMode) {
-            plugin.getLogger().info("[DEBUG] Config loaded: chunk-threshold=" + chunkThreshold + ", block-threshold=" + blockThreshold);
-        }
-
-        // World settings
-        enabledWorlds = new HashSet<>();
-        List<String> worlds = config.getStringList("enabled-worlds");
-        if (worlds.isEmpty()) {
-            // If no worlds specified, enable for all worlds
-            enabledWorlds.add("*");
-        } else {
-            enabledWorlds.addAll(worlds);
-        }
-
-        redstoneMaterials = new HashSet<>();
-        for (String materialName : config.getStringList("redstone-components")) {
-            try {
-                redstoneMaterials.add(Material.valueOf(materialName));
-            } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("Invalid material: " + materialName);
+            String content = Files.readString(file.toPath(), StandardCharsets.UTF_8);
+            if (!content.contains("config-version: \"26.2\"") && !content.contains("config-version: '26.2'")) {
+                File backupFile = new File(file.getParentFile(), file.getName() + ".bk");
+                Files.copy(file.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                plugin.getLogger().info("Created safety backup: " + file.getName() + " -> " + backupFile.getName());
             }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to check or create backup for " + file.getName() + ": " + e.getMessage());
         }
+    }
+
+    public PluginConfig getPluginConfig() {
+        return pluginConfig;
     }
 
     public int getChunkThreshold() {
-        return chunkThreshold;
+        return pluginConfig.getChunkThreshold();
     }
 
     public int getBlockThreshold() {
-        return blockThreshold;
+        return pluginConfig.getBlockThreshold();
     }
 
     public boolean isAlertsEnabled() {
-        return alertsEnabled;
+        return pluginConfig.getAlerts().isEnabled();
     }
 
     public boolean isLogToConsole() {
-        return logToConsole;
+        return pluginConfig.getAlerts().isLogToConsole();
     }
 
     public boolean isLogPerformance() {
-        return logPerformance;
+        return pluginConfig.getLogging().isPerformanceStats();
     }
 
     public boolean isWorldEnabled(String worldName) {
@@ -131,50 +106,42 @@ public class ConfigManager {
     }
 
     public boolean isDebugMode() {
-        return debugMode;
+        return pluginConfig.isDebug();
     }
 
     public int getResetInterval() {
-        return resetInterval;
+        return pluginConfig.getResetIntervalTicks();
     }
 
-    public RemovalAction getRemovalAction() {
-        return removalAction;
+    public ConfigManager.RemovalAction getRemovalAction() {
+        PluginConfig.RemovalAction action = pluginConfig.getRemovalAction();
+        if (action == PluginConfig.RemovalAction.DISABLE) return RemovalAction.DISABLE;
+        if (action == PluginConfig.RemovalAction.DROP) return RemovalAction.DROP;
+        return RemovalAction.REMOVE;
     }
 
     public boolean isWarningEnabled() {
-        return warningEnabled;
+        return pluginConfig.getWarning().isEnabled();
     }
 
     public int getWarningThresholdPercent() {
-        return warningThresholdPercent;
+        return pluginConfig.getWarning().getThresholdPercent();
     }
 
-    /**
-     * Calculate the warning threshold for chunks.
-     */
     public int getChunkWarningThreshold() {
-        return (chunkThreshold * warningThresholdPercent) / 100;
+        return (getChunkThreshold() * getWarningThresholdPercent()) / 100;
     }
 
-    /**
-     * Calculate the warning threshold for blocks.
-     */
     public int getBlockWarningThreshold() {
-        return (blockThreshold * warningThresholdPercent) / 100;
+        return (getBlockThreshold() * getWarningThresholdPercent()) / 100;
     }
 
     public boolean isWhitelistEnabled() {
-        return whitelistEnabled;
+        return pluginConfig.getWhitelist().isEnabled();
     }
 
-    /**
-     * Check if a chunk is whitelisted for monitoring.
-     * @param chunkKey The chunk key in format "world:chunkX:chunkZ"
-     * @return true if whitelist is disabled OR chunk is in whitelist
-     */
     public boolean isChunkWhitelisted(String chunkKey) {
-        if (!whitelistEnabled) return true; // If whitelist disabled, all chunks are allowed
+        if (!isWhitelistEnabled()) return true;
         return whitelistedChunks.contains(chunkKey);
     }
 

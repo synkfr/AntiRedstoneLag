@@ -1,5 +1,5 @@
-# AntiRedstoneLag Premium Messages
-# Supports & color codes and &#RRGGBB hex colors
+# AntiRedstoneLag Messages
+# Supports & color codes, MiniMessage tags, and &#RRGGBB hex colors
 
 alerts:
   redstone-removed: |-
@@ -9,6 +9,7 @@ alerts:
     &7│ &6Block: &e{material} &7│
     &7│ &6Chunk Updates: &e{chunk_count} &7│ &6Block Updates: &e{block_count} &7│
     &#FF6B6B└─ &7Removed for server performance ─┘
+  redstone-warning: "&#FFD93D⚠ &eWarning: &7Redstone activity at &e{x}, {y}, {z} &7is at &c{percent}% &7of threshold!"
 
 commands:
   reload-success: "&#4ECDC4✓ &aConfiguration and messages reloaded successfully!"
@@ -18,7 +19,7 @@ commands:
     &7Blocks monitored: &e{blocks}
     &7Total removals: &e{total_removals}
     &7Removals today: &e{today_removals}
-    &7Performance impact: &a{performance}%
+    &7Performance: &a{performance}%
     &#4ECDC4└────────────────────────┘
   logs-info: |-
     &#4ECDC4Logging System Information:
@@ -26,6 +27,15 @@ commands:
     &7Log folder: &e{folder}
     &7Use &6/arl logs download &7to get latest log file
   logs-download: "&#4ECDC4✓ &aLog file has been prepared for download!"
+  logs-no-folder: "&#FF6B6B✗ &cLogs folder not found!"
+  logs-empty: "&#FF6B6B✗ &cNo log files found!"
+  logs-file-info: |-
+    &#4ECDC4┌─ &bLatest Log File &7─┐
+    &7File: &e{filename}
+    &7Size: &e{size}
+    &7Modified: &e{modified}
+    &7Path: &e{path}
+    &#4ECDC4└────────────────────┘
   no-permission: "&#FF6B6B✗ &cYou don't have permission to use this command!"
   help: |-
     &#FFD93D┌─ &6AntiRedstoneLag &7v{version} ──────┐
@@ -36,6 +46,10 @@ commands:
     &#FFD93D└────────────────────────────┘
 
 messages:
+  prefix: "&#4ECDC4[ARL]&r "
   enabled: "&#4ECDC4✓ &aAntiRedstoneLag v{version} has been enabled!"
   disabled: "&#FF6B6B✗ &cAntiRedstoneLag has been disabled!"
-  prefix: "&#4ECDC4[ARL]&r "
+  update-available-console: "A new version is available: v{version} (current: v{current})"
+  update-download-console: "Download at: {url}"
+  update-available-player: "<gold>[AntiRedstoneLag] <yellow>A new version is available: <green>v{version}"
+  update-download-player: "<gold>[AntiRedstoneLag] <gray>Download at: <aqua><click:open_url:'{url}'>{url}</click>"

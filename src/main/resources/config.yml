@@ -1,5 +1,8 @@
-# AntiRedstoneLag Premium Configuration
+# AntiRedstoneLag Configuration
 # Advanced redstone lag prevention system
+
+# Internal configuration version - do not modify
+config-version: "26.2"
 
 # Maximum redstone updates per chunk per reset interval
 chunk-threshold: 500

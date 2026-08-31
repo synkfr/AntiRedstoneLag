@@ -1,21 +1,21 @@
 package org.ayosynk.antiRedstoneLag.config;
 
-import org.ayosynk.antiRedstoneLag.AntiRedstoneLag;
-
+import eu.okaeri.configs.serdes.commons.SerdesCommons;
+import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
+import eu.okaeri.configs.yaml.snakeyaml.YamlSnakeYamlConfigurer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 public class MessageManager {
     private final JavaPlugin plugin;
-    private File messagesFile;
-    private FileConfiguration messagesConfig;
+    private MessagesConfig messagesConfig;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final LegacyComponentSerializer legacySerializer = LegacyComponentSerializer.builder()
             .character('&')
@@ -25,74 +25,53 @@ public class MessageManager {
 
     public MessageManager(JavaPlugin plugin) {
         this.plugin = plugin;
-        setupMessages();
-    }
-
-    private void setupMessages() {
-        if (!plugin.getDataFolder().exists()) {
-            plugin.getDataFolder().mkdir();
-        }
-
-        messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-
-        if (!messagesFile.exists()) {
-            plugin.saveResource("messages.yml", false);
-            plugin.getLogger().info("messages.yml has been created!");
-        }
-
         reloadMessages();
     }
 
     public void reloadMessages() {
-        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
-    }
-
-    public Component getMessage(String path) {
-        String message = messagesConfig.getString(path);
-        if (message == null) {
-            plugin.getLogger().warning("Message path '" + path + "' not found in messages.yml!");
-            return Component.text("Message not found: " + path);
+        if (!plugin.getDataFolder().exists()) {
+            plugin.getDataFolder().mkdirs();
         }
-        return parseMessage(message);
+
+        File messagesFile = new File(plugin.getDataFolder(), "messages.yml");
+        handleBackup(messagesFile);
+
+        this.messagesConfig = eu.okaeri.configs.ConfigManager.create(MessagesConfig.class, it -> {
+            it.withConfigurer(new YamlSnakeYamlConfigurer(), new SerdesBukkit(), new SerdesCommons());
+            it.withBindFile(messagesFile);
+            it.withRemoveOrphans(true);
+            it.saveDefaults();
+            it.load(true);
+        });
     }
 
-    public Component getMessage(String path, String defaultValue) {
-        String message = messagesConfig.getString(path, defaultValue);
-        return parseMessage(message);
+    private void handleBackup(File file) {
+        if (!file.exists()) return;
+        try {
+            String content = Files.readString(file.toPath(), StandardCharsets.UTF_8);
+            if (!content.contains("AntiRedstoneLag Messages")) {
+                File backupFile = new File(file.getParentFile(), file.getName() + ".bk");
+                Files.copy(file.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                plugin.getLogger().info("Created safety backup: " + file.getName() + " -> " + backupFile.getName());
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to check or create backup for " + file.getName() + ": " + e.getMessage());
+        }
     }
 
-    /**
-     * Legacy support: returns translated string for legacy Bukkit methods
-     */
-    public String getMessageString(String path, String defaultValue) {
-        return legacySerializer.serialize(getMessage(path, defaultValue));
-    }
-    
-    public String getMessageString(String path) {
-        return legacySerializer.serialize(getMessage(path));
+    public MessagesConfig getMessagesConfig() {
+        return messagesConfig;
     }
 
-    private Component parseMessage(String message) {
-        if (message == null) return Component.empty();
-        
-        // Convert legacy &#RRGGBB to <color:#RRGGBB> for MiniMessage
-        // Also handle & color codes if they come from old config
+    public Component parseMessage(String message) {
+        if (message == null || message.isEmpty()) return Component.empty();
         if (message.contains("&") || message.contains("§")) {
             return legacySerializer.deserialize(message.replace("&#", "#"));
         }
-        
         return miniMessage.deserialize(message);
     }
 
-
-    public boolean saveMessages() {
-        try {
-            messagesConfig.save(messagesFile);
-            return true;
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not save messages.yml!");
-            e.printStackTrace();
-            return false;
-        }
+    public String getMessageString(String message) {
+        return legacySerializer.serialize(parseMessage(message));
     }
 }
