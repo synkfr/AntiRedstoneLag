@@ -17,9 +17,32 @@ reset-interval-ticks: 20
 debug: false
 
 # Action to take when redstone exceeds threshold
-# Options: REMOVE (set to air), DISABLE (cancel redstone signal), DROP (break and drop item)
-removal-action: REMOVE
+# Options: FREEZE (temporarily pause clock), DISABLE (cancel signal), DROP (break and drop item), REMOVE (set to air)
+removal-action: FREEZE
 
+# Non-destructive freezing system - temporarily pauses clocks before escalating
+freeze:
+  enabled: true
+  duration-seconds: 15
+  max-freeze-attempts: 3
+
+# Adaptive performance scaling - adjusts thresholds dynamically based on MSPT and TPS
+adaptive:
+  enabled: true
+  target-mspt: 40.0
+  min-tps: 18.0
+  healthy-headroom-multiplier: 1.5
+
+# Clock fingerprinting - distinguishes periodic clocks from bursty sorting systems
+fingerprint:
+  enabled: true
+  clock-strictness: 0.7
+
+# Player proximity throttling - enforces stricter limits on unattended redstone
+proximity:
+  enabled: true
+  player-radius: 96
+  unattended-strict-multiplier: 0.6
 
 # Lockdown system (EMP) - Prevents players from repeatedly triggering lag machines
 lockdown:
@@ -28,7 +51,6 @@ lockdown:
   duration-seconds: 60
 
 # Warning system - warn players before removing their redstone
-
 warning:
   enabled: true
   # Percentage of threshold at which to warn (e.g., 80 = warn at 80% of threshold)
@@ -39,10 +61,8 @@ enabled-worlds:
   - "*"
 
 # Whitelist mode - only monitor specific chunks instead of all chunks
-# When enabled, only chunks in the whitelist will be monitored
 whitelist:
   enabled: false
-  # List chunks as "world:chunkX:chunkZ" (e.g., "world:10:15")
   chunks:
     - "world:0:0"
 
@@ -76,3 +96,15 @@ redstone-components:
   - DROPPER
   - DISPENSER
   - HOPPER
+  - CRAFTER
+  - COPPER_BULB
+  - EXPOSED_COPPER_BULB
+  - WEATHERED_COPPER_BULB
+  - OXIDIZED_COPPER_BULB
+  - WAXED_COPPER_BULB
+  - WAXED_EXPOSED_COPPER_BULB
+  - WAXED_WEATHERED_COPPER_BULB
+  - WAXED_OXIDIZED_COPPER_BULB
+  - SCULK_SENSOR
+  - CALIBRATED_SCULK_SENSOR
+  - CHISELED_BOOKSHELF

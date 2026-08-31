@@ -20,9 +20,10 @@ import java.util.List;
 public class PluginConfig extends OkaeriConfig {
 
     public enum RemovalAction {
-        REMOVE,
+        FREEZE,
         DISABLE,
-        DROP
+        DROP,
+        REMOVE
     }
 
     @CustomKey("config-version")
@@ -48,9 +49,25 @@ public class PluginConfig extends OkaeriConfig {
     @CustomKey("removal-action")
     @Comment({
         "Action to take when redstone exceeds threshold",
-        "Options: REMOVE (set to air), DISABLE (cancel redstone signal), DROP (break and drop item)"
+        "Options: FREEZE (temporarily pause clock), DISABLE (cancel signal), DROP (break and drop item), REMOVE (set to air)"
     })
-    private RemovalAction removalAction = RemovalAction.REMOVE;
+    private RemovalAction removalAction = RemovalAction.FREEZE;
+
+    @CustomKey("freeze")
+    @Comment("Non-destructive freezing system - temporarily pauses clocks before escalating")
+    private FreezeConfig freeze = new FreezeConfig();
+
+    @CustomKey("adaptive")
+    @Comment("Adaptive performance scaling - adjusts thresholds dynamically based on MSPT and TPS")
+    private AdaptiveConfig adaptive = new AdaptiveConfig();
+
+    @CustomKey("fingerprint")
+    @Comment("Clock fingerprinting - distinguishes periodic clocks from bursty sorting systems")
+    private ClockFingerprintConfig fingerprint = new ClockFingerprintConfig();
+
+    @CustomKey("proximity")
+    @Comment("Player proximity throttling - enforces stricter limits on unattended redstone")
+    private ProximityConfig proximity = new ProximityConfig();
 
     @CustomKey("lockdown")
     @Comment({
@@ -99,8 +116,112 @@ public class PluginConfig extends OkaeriConfig {
             Material.TRAPPED_CHEST,
             Material.DROPPER,
             Material.DISPENSER,
-            Material.HOPPER
+            Material.HOPPER,
+            Material.CRAFTER,
+            Material.COPPER_BULB,
+            Material.EXPOSED_COPPER_BULB,
+            Material.WEATHERED_COPPER_BULB,
+            Material.OXIDIZED_COPPER_BULB,
+            Material.WAXED_COPPER_BULB,
+            Material.WAXED_EXPOSED_COPPER_BULB,
+            Material.WAXED_WEATHERED_COPPER_BULB,
+            Material.WAXED_OXIDIZED_COPPER_BULB,
+            Material.SCULK_SENSOR,
+            Material.CALIBRATED_SCULK_SENSOR,
+            Material.CHISELED_BOOKSHELF
     );
+
+    public static class FreezeConfig extends OkaeriConfig {
+        @CustomKey("enabled")
+        private boolean enabled = true;
+
+        @CustomKey("duration-seconds")
+        private int durationSeconds = 15;
+
+        @CustomKey("max-freeze-attempts")
+        private int maxFreezeAttempts = 3;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public int getDurationSeconds() {
+            return Math.max(1, durationSeconds);
+        }
+
+        public int getMaxFreezeAttempts() {
+            return Math.max(1, maxFreezeAttempts);
+        }
+    }
+
+    public static class AdaptiveConfig extends OkaeriConfig {
+        @CustomKey("enabled")
+        private boolean enabled = true;
+
+        @CustomKey("target-mspt")
+        private double targetMspt = 40.0;
+
+        @CustomKey("min-tps")
+        private double minTps = 18.0;
+
+        @CustomKey("healthy-headroom-multiplier")
+        private double healthyHeadroomMultiplier = 1.5;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public double getTargetMspt() {
+            return targetMspt;
+        }
+
+        public double getMinTps() {
+            return minTps;
+        }
+
+        public double getHealthyHeadroomMultiplier() {
+            return Math.max(1.0, healthyHeadroomMultiplier);
+        }
+    }
+
+    public static class ClockFingerprintConfig extends OkaeriConfig {
+        @CustomKey("enabled")
+        private boolean enabled = true;
+
+        @CustomKey("clock-strictness")
+        private double clockStrictness = 0.7;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public double getClockStrictness() {
+            return Math.min(1.0, Math.max(0.1, clockStrictness));
+        }
+    }
+
+    public static class ProximityConfig extends OkaeriConfig {
+        @CustomKey("enabled")
+        private boolean enabled = true;
+
+        @CustomKey("player-radius")
+        private int playerRadius = 96;
+
+        @CustomKey("unattended-strict-multiplier")
+        private double unattendedStrictMultiplier = 0.6;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public int getPlayerRadius() {
+            return Math.max(16, playerRadius);
+        }
+
+        public double getUnattendedStrictMultiplier() {
+            return Math.min(1.0, Math.max(0.1, unattendedStrictMultiplier));
+        }
+    }
 
     public static class LockdownConfig extends OkaeriConfig {
         @CustomKey("enabled")
@@ -226,7 +347,23 @@ public class PluginConfig extends OkaeriConfig {
     }
 
     public RemovalAction getRemovalAction() {
-        return removalAction != null ? removalAction : RemovalAction.REMOVE;
+        return removalAction != null ? removalAction : RemovalAction.FREEZE;
+    }
+
+    public FreezeConfig getFreeze() {
+        return freeze;
+    }
+
+    public AdaptiveConfig getAdaptive() {
+        return adaptive;
+    }
+
+    public ClockFingerprintConfig getFingerprint() {
+        return fingerprint;
+    }
+
+    public ProximityConfig getProximity() {
+        return proximity;
     }
 
     public LockdownConfig getLockdown() {

@@ -19,6 +19,7 @@ permissions:
       antiredstonelag.alerts: true
       antiredstonelag.bypass: true
       antiredstonelag.hotspots: true
+      antiredstonelag.inspect: true
       antiredstonelag.admin: true
   antiredstonelag.use:
     description: Use basic plugin commands
@@ -40,6 +41,9 @@ permissions:
     default: false
   antiredstonelag.hotspots:
     description: View and export redstone hotspot map
+    default: op
+  antiredstonelag.inspect:
+    description: Toggle live redstone inspector particles
     default: op
   antiredstonelag.admin:
     description: Receive update notifications

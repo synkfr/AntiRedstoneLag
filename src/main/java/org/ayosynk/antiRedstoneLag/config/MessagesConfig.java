@@ -30,6 +30,12 @@ public class MessagesConfig extends OkaeriConfig {
         @CustomKey("chunk-lockdown-local")
         private String chunkLockdownLocal = "&#FF6B6B[!] &cThe chunk you are standing in has been locked down for &e{duration}s &cdue to extreme redstone lag!";
 
+        @CustomKey("clock-frozen")
+        private String clockFrozen = "&#FFD93D⚠ &eClock at &6{x}, {y}, {z} &epause-throttled for &c{duration}s &e(high frequency). Auto-resuming soon.";
+
+        @CustomKey("clock-resumed")
+        private String clockResumed = "&#4ECDC4✓ &aClock at &6{x}, {y}, {z} &ahas resumed operation.";
+
         @CustomKey("redstone-removed")
         private String redstoneRemoved = "&#FF6B6B┌─ &c⚠ Lag Machine Detected &7─┐\n" +
                 "&7│ &6Coordinates: &e{x}, {y}, {z} &7│\n" +
@@ -47,6 +53,14 @@ public class MessagesConfig extends OkaeriConfig {
 
         public String getChunkLockdownLocal() {
             return chunkLockdownLocal;
+        }
+
+        public String getClockFrozen() {
+            return clockFrozen;
+        }
+
+        public String getClockResumed() {
+            return clockResumed;
         }
 
         public String getRedstoneRemoved() {
@@ -103,6 +117,15 @@ public class MessagesConfig extends OkaeriConfig {
         @CustomKey("hotspots-exported")
         private String hotspotsExported = "&#4ECDC4✓ &aHotspot map exported to: &e{path}";
 
+        @CustomKey("inspect-enabled")
+        private String inspectEnabled = "&#4ECDC4✓ &aReal-time redstone inspector enabled for &e{duration}s&a! Particles show active components.";
+
+        @CustomKey("inspect-disabled")
+        private String inspectDisabled = "&#FF6B6B✗ &cReal-time redstone inspector disabled.";
+
+        @CustomKey("inspect-actionbar")
+        private String inspectActionbar = "<gold>ARL Inspect <dark_gray>| <yellow>Chunk: <aqua>{chunk_ups} UPS <dark_gray>| <yellow>Top Block: <red>{block_ups} UPS <gray>({material})";
+
         @CustomKey("no-permission")
         private String noPermission = "&#FF6B6B✗ &cYou don't have permission to use this command!";
 
@@ -112,6 +135,7 @@ public class MessagesConfig extends OkaeriConfig {
                 "&6/arl stats     &7- View plugin statistics\n" +
                 "&6/arl logs      &7- View or download logs\n" +
                 "&6/arl hotspots  &7- View top redstone hotspots\n" +
+                "&6/arl inspect   &7- Toggle real-time redstone HUD & particles\n" +
                 "&6/arl help      &7- Show this help message\n" +
                 "&#FFD93D└──────────────────────────────────────┘";
 
@@ -153,6 +177,18 @@ public class MessagesConfig extends OkaeriConfig {
 
         public String getHotspotsExported() {
             return hotspotsExported;
+        }
+
+        public String getInspectEnabled() {
+            return inspectEnabled;
+        }
+
+        public String getInspectDisabled() {
+            return inspectDisabled;
+        }
+
+        public String getInspectActionbar() {
+            return inspectActionbar;
         }
 
         public String getNoPermission() {

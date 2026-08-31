@@ -13,6 +13,10 @@ import org.ayosynk.antiRedstoneLag.listener.RedstoneListener;
 import org.ayosynk.antiRedstoneLag.manager.CounterManager;
 import org.ayosynk.antiRedstoneLag.manager.CounterManager.HotspotGroup;
 import org.ayosynk.antiRedstoneLag.manager.LogManager;
+import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.Location;
+import org.bukkit.Particle;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
@@ -26,6 +30,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CommandHandler implements BasicCommand {
     private static final int HOTSPOT_MAX = 50;
@@ -38,6 +45,7 @@ public class CommandHandler implements BasicCommand {
     private final LogManager logManager;
     private final CounterManager counterManager;
     private final TabCompleteHandler tabCompleteHandler;
+    private final Map<UUID, Long> activeInspectors = new ConcurrentHashMap<>();
 
     public CommandHandler(AntiRedstoneLag plugin, ConfigManager configManager,
                           MessageManager messageManager, LogManager logManager,
@@ -48,6 +56,39 @@ public class CommandHandler implements BasicCommand {
         this.logManager = logManager;
         this.counterManager = counterManager;
         this.tabCompleteHandler = new TabCompleteHandler();
+        startInspectorTask();
+    }
+
+    private void startInspectorTask() {
+        plugin.getScheduler().runTaskTimer(() -> {
+            if (activeInspectors.isEmpty()) return;
+            long now = System.currentTimeMillis();
+            for (Map.Entry<UUID, Long> entry : activeInspectors.entrySet()) {
+                UUID uuid = entry.getKey();
+                long expiry = entry.getValue();
+                Player player = Bukkit.getPlayer(uuid);
+                if (player == null || !player.isOnline() || now > expiry) {
+                    activeInspectors.remove(uuid);
+                    if (player != null && player.isOnline()) {
+                        player.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getInspectDisabled()));
+                    }
+                    continue;
+                }
+
+                Location pLoc = player.getLocation();
+                long chunkKey = CounterManager.packChunk(pLoc.getBlockX() >> 4, pLoc.getBlockZ() >> 4);
+                int chunkUps = counterManager.getChunkUpdates(pLoc.getWorld().getUID(), chunkKey);
+                double mspt = Bukkit.getAverageTickTime();
+
+                player.sendActionBar(MM.deserialize(
+                        "<gold>ARL Inspect <dark_gray>| <yellow>Chunk: <aqua>" + chunkUps + " UPS" +
+                        " <dark_gray>| <yellow>MSPT: <green>" + String.format("%.1f", mspt) + "ms" +
+                        " <dark_gray>| <yellow>TPS: <green>" + String.format("%.1f", Bukkit.getTPS()[0])));
+
+                player.spawnParticle(Particle.DUST, pLoc.clone().add(0, 0.5, 0), 2, 0.5, 0.5, 0.5,
+                        new Particle.DustOptions(Color.fromRGB(78, 205, 196), 1.0f));
+            }
+        }, 10L, 10L);
     }
 
     @Override
@@ -75,6 +116,10 @@ public class CommandHandler implements BasicCommand {
                 if (!hasPermission(sender, "antiredstonelag.hotspots")) return;
                 hotspotsCommand(sender, args);
                 break;
+            case "inspect":
+                if (!hasPermission(sender, "antiredstonelag.inspect")) return;
+                inspectCommand(sender, args);
+                break;
             case "help":
             default:
                 showHelp(sender);
@@ -95,6 +140,33 @@ public class CommandHandler implements BasicCommand {
     @Override
     public @Nullable String permission() {
         return "antiredstonelag.use";
+    }
+
+    private void inspectCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(MM.deserialize("<red>Only players can use the visual inspector.</red>"));
+            return;
+        }
+
+        UUID uuid = player.getUniqueId();
+        if (activeInspectors.containsKey(uuid)) {
+            activeInspectors.remove(uuid);
+            player.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getInspectDisabled()));
+            return;
+        }
+
+        int durationSeconds = 30;
+        if (args.length > 1) {
+            try {
+                durationSeconds = Math.max(5, Math.min(300, Integer.parseInt(args[1])));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        final int finalDuration = durationSeconds;
+        activeInspectors.put(uuid, System.currentTimeMillis() + (finalDuration * 1000L));
+        player.sendMessage(messageManager.parseMessage(messageManager.getMessagesConfig().getCommands().getInspectEnabled())
+                .replaceText(t -> t.matchLiteral("{duration}").replacement(String.valueOf(finalDuration))));
     }
 
     private void hotspotsCommand(CommandSender sender, String[] args) {

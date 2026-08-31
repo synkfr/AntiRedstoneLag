@@ -24,12 +24,15 @@ public class TabCompleteHandler {
             if ("hotspots".startsWith(partial) && sender.hasPermission("antiredstonelag.hotspots")) {
                 completions.add("hotspots");
             }
+            if ("inspect".startsWith(partial) && sender.hasPermission("antiredstonelag.inspect")) {
+                completions.add("inspect");
+            }
             if ("help".startsWith(partial)) {
                 completions.add("help");
             }
 
         } else if (args.length == 2) {
-            String sub     = args[0].toLowerCase();
+            String sub = args[0].toLowerCase();
             String partial = args[1].toLowerCase();
 
             if (sub.equals("logs") && sender.hasPermission("antiredstonelag.logs")) {
@@ -37,13 +40,18 @@ public class TabCompleteHandler {
                     completions.add("download");
                 }
             } else if (sub.equals("hotspots") && sender.hasPermission("antiredstonelag.hotspots")) {
-                // Suggest page numbers 1-5 and the export option
                 if ("export".startsWith(partial)) {
                     completions.add("export");
                 }
                 for (int p = 1; p <= 5; p++) {
                     if (String.valueOf(p).startsWith(partial)) {
                         completions.add(String.valueOf(p));
+                    }
+                }
+            } else if (sub.equals("inspect") && sender.hasPermission("antiredstonelag.inspect")) {
+                for (String s : List.of("15", "30", "60", "120")) {
+                    if (s.startsWith(partial)) {
+                        completions.add(s);
                     }
                 }
             }

@@ -3,6 +3,7 @@ package org.ayosynk.antiRedstoneLag.manager;
 import org.ayosynk.antiRedstoneLag.AntiRedstoneLag;
 import org.ayosynk.antiRedstoneLag.config.ConfigManager;
 import org.ayosynk.antiRedstoneLag.config.MessageManager;
+import org.ayosynk.antiRedstoneLag.config.PluginConfig;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -31,6 +32,7 @@ public class CounterManager {
     public static final int EVENT_NONE = 0;
     public static final int EVENT_WARN = 1;
     public static final int EVENT_DISABLE = 2;
+    public static final int EVENT_FREEZE = 3;
 
     public static class HotspotGroup {
         public final String worldName;
@@ -61,7 +63,13 @@ public class CounterManager {
     private final File statsFile;
 
     private final Map<UUID, Long2LongOpenHashMap> chunkLockdowns = new ConcurrentHashMap<>();
+    private final Map<UUID, Long2LongOpenHashMap> frozenBlocks = new ConcurrentHashMap<>();
+    private final Map<UUID, Long2IntOpenHashMap> freezeViolations = new ConcurrentHashMap<>();
+    private final Map<UUID, Long2LongOpenHashMap> lastPulseTimes = new ConcurrentHashMap<>();
+    private final Map<UUID, Long2LongOpenHashMap> lastPulseDeltas = new ConcurrentHashMap<>();
+
     private final Object lockdownLock = new Object();
+    private final Object freezeLock = new Object();
 
     private final Map<UUID, Long2IntOpenHashMap> chunkCounters = new ConcurrentHashMap<>();
     private final Map<UUID, Long2IntOpenHashMap> blockCounters = new ConcurrentHashMap<>();
@@ -83,7 +91,40 @@ public class CounterManager {
         loadStats();
     }
 
-    public int processEvent(UUID worldId, long chunkKey, long blockKey) {
+    public double getAdaptiveMultiplier() {
+        if (!configManager.getPluginConfig().getAdaptive().isEnabled()) return 1.0;
+        try {
+            double mspt = Bukkit.getAverageTickTime();
+            double targetMspt = configManager.getPluginConfig().getAdaptive().getTargetMspt();
+            if (mspt <= 35.0) {
+                return configManager.getPluginConfig().getAdaptive().getHealthyHeadroomMultiplier();
+            } else if (mspt >= 50.0) {
+                return 0.5;
+            } else if (mspt > targetMspt) {
+                return 0.75;
+            }
+        } catch (Throwable ignored) {
+        }
+        return 1.0;
+    }
+
+    public int processEvent(UUID worldId, long chunkKey, long blockKey, boolean hasNearbyPlayers) {
+        long now = System.currentTimeMillis();
+
+        synchronized (freezeLock) {
+            Long2LongOpenHashMap worldFrozen = frozenBlocks.get(worldId);
+            if (worldFrozen != null) {
+                long expiration = worldFrozen.get(blockKey);
+                if (expiration > 0) {
+                    if (now < expiration) {
+                        return EVENT_FREEZE;
+                    } else {
+                        worldFrozen.remove(blockKey);
+                    }
+                }
+            }
+        }
+
         synchronized (counterLock) {
             Long2IntOpenHashMap cMap = chunkCounters.computeIfAbsent(worldId, k -> new Long2IntOpenHashMap());
             Long2IntOpenHashMap bMap = blockCounters.computeIfAbsent(worldId, k -> new Long2IntOpenHashMap());
@@ -91,16 +132,49 @@ public class CounterManager {
             int chunkVal = cMap.addTo(chunkKey, 1) + 1;
             int blockVal = bMap.addTo(blockKey, 1) + 1;
 
-            int chunkThreshold = configManager.getChunkThreshold();
-            int blockThreshold = configManager.getBlockThreshold();
+            double multiplier = getAdaptiveMultiplier();
+            if (!hasNearbyPlayers && configManager.getPluginConfig().getProximity().isEnabled()) {
+                multiplier *= configManager.getPluginConfig().getProximity().getUnattendedStrictMultiplier();
+            }
+
+            if (configManager.getPluginConfig().getFingerprint().isEnabled()) {
+                Long2LongOpenHashMap pTimes = lastPulseTimes.computeIfAbsent(worldId, k -> new Long2LongOpenHashMap());
+                Long2LongOpenHashMap pDeltas = lastPulseDeltas.computeIfAbsent(worldId, k -> new Long2LongOpenHashMap());
+                long lastTime = pTimes.get(blockKey);
+                if (lastTime > 0) {
+                    long delta = now - lastTime;
+                    long prevDelta = pDeltas.get(blockKey);
+                    if (prevDelta > 0 && Math.abs(delta - prevDelta) <= 50 && delta <= 300) {
+                        multiplier *= configManager.getPluginConfig().getFingerprint().getClockStrictness();
+                    }
+                    pDeltas.put(blockKey, delta);
+                }
+                pTimes.put(blockKey, now);
+            }
+
+            int chunkThreshold = (int) Math.max(1, configManager.getChunkThreshold() * multiplier);
+            int blockThreshold = (int) Math.max(1, configManager.getBlockThreshold() * multiplier);
 
             if (chunkVal > chunkThreshold && blockVal > blockThreshold) {
+                PluginConfig.RemovalAction action = configManager.getPluginConfig().getRemovalAction();
+                if (action == PluginConfig.RemovalAction.FREEZE) {
+                    int violations;
+                    synchronized (freezeLock) {
+                        Long2IntOpenHashMap vMap = freezeViolations.computeIfAbsent(worldId, k -> new Long2IntOpenHashMap());
+                        violations = vMap.addTo(blockKey, 1) + 1;
+                    }
+                    if (violations <= configManager.getPluginConfig().getFreeze().getMaxFreezeAttempts()) {
+                        int duration = configManager.getPluginConfig().getFreeze().getDurationSeconds();
+                        freezeBlock(worldId, blockKey, duration);
+                        return EVENT_FREEZE;
+                    }
+                }
                 return EVENT_DISABLE;
             }
 
             if (configManager.isWarningEnabled()) {
-                int chunkWarn = configManager.getChunkWarningThreshold();
-                int blockWarn = configManager.getBlockWarningThreshold();
+                int chunkWarn = (chunkThreshold * configManager.getWarningThresholdPercent()) / 100;
+                int blockWarn = (blockThreshold * configManager.getWarningThresholdPercent()) / 100;
                 if ((chunkVal >= chunkWarn && chunkVal <= chunkThreshold) ||
                     (blockVal >= blockWarn && blockVal <= blockThreshold)) {
                     return EVENT_WARN;
@@ -108,6 +182,38 @@ public class CounterManager {
             }
 
             return EVENT_NONE;
+        }
+    }
+
+    public boolean isBlockFrozen(UUID worldId, long blockKey) {
+        synchronized (freezeLock) {
+            Long2LongOpenHashMap worldFrozen = frozenBlocks.get(worldId);
+            if (worldFrozen == null) return false;
+            long expiration = worldFrozen.get(blockKey);
+            if (expiration == 0L) return false;
+            if (System.currentTimeMillis() > expiration) {
+                worldFrozen.remove(blockKey);
+                return false;
+            }
+            return true;
+        }
+    }
+
+    public void freezeBlock(UUID worldId, long blockKey, int durationSeconds) {
+        synchronized (freezeLock) {
+            Long2LongOpenHashMap worldFrozen = frozenBlocks.computeIfAbsent(worldId, k -> new Long2LongOpenHashMap());
+            worldFrozen.put(blockKey, System.currentTimeMillis() + (durationSeconds * 1000L));
+        }
+    }
+
+    public long getFreezeRemaining(UUID worldId, long blockKey) {
+        synchronized (freezeLock) {
+            Long2LongOpenHashMap worldFrozen = frozenBlocks.get(worldId);
+            if (worldFrozen == null) return 0;
+            long expiration = worldFrozen.get(blockKey);
+            if (expiration == 0L) return 0;
+            long remaining = expiration - System.currentTimeMillis();
+            return remaining > 0 ? remaining : 0;
         }
     }
 
@@ -183,6 +289,20 @@ public class CounterManager {
 
         groups.sort((a, b) -> Integer.compare(b.totalActivity, a.totalActivity));
         return groups.size() > maxGroups ? new ArrayList<>(groups.subList(0, maxGroups)) : groups;
+    }
+
+    public int getChunkUpdates(UUID worldId, long chunkKey) {
+        synchronized (counterLock) {
+            Long2IntOpenHashMap cMap = chunkCounters.get(worldId);
+            return cMap != null ? cMap.get(chunkKey) : 0;
+        }
+    }
+
+    public int getBlockUpdates(UUID worldId, long blockKey) {
+        synchronized (counterLock) {
+            Long2IntOpenHashMap bMap = blockCounters.get(worldId);
+            return bMap != null ? bMap.get(blockKey) : 0;
+        }
     }
 
     public boolean isChunkLocked(UUID worldId, long chunkKey) {
@@ -274,6 +394,9 @@ public class CounterManager {
         warnedPlayers.clear();
         if (System.currentTimeMillis() - lastResetTime > DAY_MS) {
             removalsToday.set(0);
+            synchronized (freezeLock) {
+                freezeViolations.values().forEach(Long2IntOpenHashMap::clear);
+            }
             lastResetTime = System.currentTimeMillis();
             saveStats();
         }
