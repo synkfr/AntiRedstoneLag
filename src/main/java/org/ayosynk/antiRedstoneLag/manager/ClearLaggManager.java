@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClearLaggManager {
@@ -54,6 +55,7 @@ public class ClearLaggManager {
 
     private final AtomicInteger secondsUntilClear = new AtomicInteger(300);
     private volatile boolean timerRunning = false;
+    private final AtomicBoolean clearingInProgress = new AtomicBoolean(false);
 
     private volatile List<EntityFilterRule> cachedWhitelistRules = new ArrayList<>();
     private volatile List<EntityFilterRule> cachedRemoveRules = new ArrayList<>();
@@ -165,23 +167,92 @@ public class ClearLaggManager {
     }
 
     public int clearEntities(ClearType type) {
+        if (!clearingInProgress.compareAndSet(false, true)) {
+            return 0;
+        }
+
         PluginConfig.ClearLaggConfig cfg = configManager.getPluginConfig().getClearlagg();
         Set<Material> itemBlacklist = new HashSet<>(cfg.getItemBlacklist());
         List<EntityFilterRule> whitelist = cachedWhitelistRules;
         List<EntityFilterRule> removeRules = cachedRemoveRules;
 
-        AtomicInteger count = new AtomicInteger(0);
-
+        List<Entity> allEntities = new ArrayList<>();
         for (World world : Bukkit.getWorlds()) {
-            for (Entity entity : world.getEntities()) {
-                if (shouldRemove(entity, type, cfg, itemBlacklist, whitelist, removeRules)) {
-                    removeEntitySafely(entity);
-                    count.incrementAndGet();
+            allEntities.addAll(world.getEntities());
+        }
+
+        if (allEntities.isEmpty()) {
+            clearingInProgress.set(false);
+            broadcastCleared(0);
+            return 0;
+        }
+
+        AtomicInteger count = new AtomicInteger(0);
+        AtomicInteger pending = new AtomicInteger(allEntities.size());
+        AtomicBoolean broadcastSent = new AtomicBoolean(false);
+
+        Runnable checkDone = () -> {
+            if (pending.decrementAndGet() <= 0) {
+                if (broadcastSent.compareAndSet(false, true)) {
+                    clearingInProgress.set(false);
+                    broadcastCleared(count.get());
+                }
+            }
+        };
+
+        // Safety fallback timeout after 2 seconds (40 ticks)
+        plugin.getScheduler().runTaskLater(() -> {
+            if (broadcastSent.compareAndSet(false, true)) {
+                clearingInProgress.set(false);
+                broadcastCleared(count.get());
+            }
+        }, 40L);
+
+        for (Entity entity : allEntities) {
+            if (entity == null) {
+                checkDone.run();
+                continue;
+            }
+
+            if (Bukkit.isOwnedByCurrentRegion(entity)) {
+                try {
+                    if (entity.isValid() && shouldRemove(entity, type, cfg, itemBlacklist, whitelist, removeRules)) {
+                        entity.remove();
+                        count.incrementAndGet();
+                    }
+                } catch (Throwable t) {
+                    plugin.getLogger().warning("Error processing entity for clear: " + t.getMessage());
+                } finally {
+                    checkDone.run();
+                }
+            } else {
+                try {
+                    boolean scheduled = entity.getScheduler().execute(plugin, () -> {
+                        try {
+                            if (entity.isValid() && shouldRemove(entity, type, cfg, itemBlacklist, whitelist, removeRules)) {
+                                entity.remove();
+                                count.incrementAndGet();
+                            }
+                        } catch (Throwable t) {
+                            plugin.getLogger().warning("Error removing entity on region thread: " + t.getMessage());
+                        } finally {
+                            checkDone.run();
+                        }
+                    }, checkDone, 1L);
+
+                    if (!scheduled) {
+                        checkDone.run();
+                    }
+                } catch (Throwable t) {
+                    checkDone.run();
                 }
             }
         }
 
-        int removed = count.get();
+        return count.get();
+    }
+
+    private void broadcastCleared(int removed) {
         Component clearedMsg = messageManager.parseMessage(
                 messageManager.getMessagesConfig().getClearlagg().getCleared())
                 .replaceText(t -> t.matchLiteral("{count}").replacement(String.valueOf(removed)));
@@ -192,14 +263,13 @@ public class ClearLaggManager {
         if (configManager.isLogToConsole()) {
             Bukkit.getConsoleSender().sendMessage(clearedMsg);
         }
-
-        return removed;
     }
 
     public EntityCounts countEntities() {
         EntityCounts counts = new EntityCounts();
         for (World world : Bukkit.getWorlds()) {
             for (Entity entity : world.getEntities()) {
+                if (entity == null) continue;
                 if (entity instanceof Item) counts.items++;
                 else if (entity instanceof Projectile) counts.projectiles++;
                 else if (entity instanceof Monster) counts.monsters++;
@@ -261,13 +331,5 @@ public class ClearLaggManager {
         }
 
         return false;
-    }
-
-    private void removeEntitySafely(Entity entity) {
-        try {
-            Bukkit.getRegionScheduler().execute(plugin, entity.getLocation(), entity::remove);
-        } catch (Throwable t) {
-            entity.remove();
-        }
     }
 }

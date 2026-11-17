@@ -37,7 +37,7 @@ public class PluginConfig extends OkaeriConfig {
 
     @CustomKey("config-version")
     @Comment("Internal configuration version - do not modify")
-    private String configVersion = "26.2";
+    private String configVersion = "26.3";
 
     @CustomKey("chunk-threshold")
     @Comment("Maximum redstone updates per chunk per reset interval")

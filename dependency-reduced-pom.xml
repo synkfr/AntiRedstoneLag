@@ -4,7 +4,7 @@
   <groupId>org.ayosynk</groupId>
   <artifactId>AntiRedstoneLag</artifactId>
   <name>AntiRedstoneLag</name>
-  <version>26.2</version>
+  <version>26.3</version>
   <build>
     <defaultGoal>clean package</defaultGoal>
     <resources>

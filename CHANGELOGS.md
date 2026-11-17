@@ -1,5 +1,16 @@
 # AntiRedstoneLag - Changelog
 
+## Version 26.3
+
+### Folia Regional Thread-Safety & Performance Fixes
+- **Folia-Safe ClearLagg Engine** - Resolved `IllegalStateException: Thread failed main thread check: Accessing entity state off owning region's thread` that occurred during auto-clear and manual clear commands on Folia.
+- **Regional Entity Scheduling** - Dynamically checks `Bukkit.isOwnedByCurrentRegion(entity)` and dispatches off-region entity inspection (custom names, items, passengers, onGround) and removal via `entity.getScheduler().execute(...)` directly onto the entity's owning regional tick thread.
+- **Asynchronous Task Tracking** - Added atomic task completion tracking and fallback safety timeouts ensuring cleared entity counts are broadcast accurately once all regional threads complete entity processing.
+- **Spatial Nearby Player Queries** - Replaced full-world player iteration in proximity throttling (`RedstoneListener.hasPlayersNearby`) and snapshot culprit resolution (`SnapshotManager.findNearestPlayer`) with Paper's native spatial `world.getNearbyPlayers()`, preventing cross-region player loops and off-thread `player.getLocation()` calls on Folia.
+- **ClearLagg Concurrency Lock** - Added an atomic execution guard (`clearingInProgress`) preventing overlapping concurrent clear runs during heavy server load.
+
+---
+
 ## Version 26.2
 
 ### Major Architecture and Modernization

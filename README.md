@@ -1,13 +1,13 @@
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-26.2-blue?style=for-the-badge&logo=github)](https://github.com/synkfr/AntiRedstoneLag/releases)
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.21.6--26.2-green?style=for-the-badge&logo=minecraft)](https://www.minecraft.net/)
+[![Version](https://img.shields.io/badge/version-26.3-blue?style=for-the-badge&logo=github)](https://github.com/synkfr/AntiRedstoneLag/releases)
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.21.6--26.3-green?style=for-the-badge&logo=minecraft)](https://www.minecraft.net/)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](LICENSE)
 [![Discord](https://img.shields.io/discord/1378591879393710110?style=for-the-badge&logo=discord&label=Discord)](https://discord.gg/fGyDyp3Ak4)
 
 # AntiRedstoneLag
 
-**Advanced Redstone Lag Prevention, Forensic Diagnostics, and ClearLagg Engine for Modern Minecraft Servers (Paper & Folia 1.21.6 - 26.2)**
+**Advanced Redstone Lag Prevention, Forensic Diagnostics, and ClearLagg Engine for Modern Minecraft Servers (Paper & Folia 1.21.6 - 26.3)**
 
 [Features](#features) | [Performance](#performance) | [Installation](#installation) | [Commands and Permissions](#commands-and-permissions) | [ClearLagg Engine](#clearlagg-engine) | [Disclosures](#project-disclosures-and-ai-policy)
 
@@ -76,7 +76,7 @@ Built natively for Paper and Folia regional threading, it combines periodicity c
 3. Restart your server.
 4. Adjust settings in `plugins/AntiRedstoneLag/config.yml` and `messages.yml` if desired.
 
-> **Requirements:** Paper, Purpur, or Folia **1.21.6 through 26.2** running on **Java 21+**.
+> **Requirements:** Paper, Purpur, or Folia **1.21.6 through 26.3** running on **Java 21+**.
 
 ---
 

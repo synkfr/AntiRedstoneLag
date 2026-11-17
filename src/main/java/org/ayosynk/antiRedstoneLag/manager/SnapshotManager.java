@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
@@ -203,22 +204,41 @@ public class SnapshotManager {
     }
 
     private Player findNearestPlayer(World world, int x, int y, int z, double maxDistance) {
+        Location loc = new Location(world, x + 0.5, y + 0.5, z + 0.5);
         double maxDistSq = maxDistance * maxDistance;
         Player nearest = null;
         double nearestDistSq = Double.MAX_VALUE;
 
-        for (Player player : world.getPlayers()) {
-            Location loc = player.getLocation();
-            double dx = loc.getX() - x;
-            double dy = loc.getY() - y;
-            double dz = loc.getZ() - z;
-            double distSq = dx * dx + dy * dy + dz * dz;
-            if (distSq <= maxDistSq && distSq < nearestDistSq) {
-                nearest = player;
-                nearestDistSq = distSq;
+        try {
+            Collection<Player> nearby = world.getNearbyPlayers(loc, maxDistance, maxDistance, maxDistance);
+            for (Player player : nearby) {
+                Location pLoc = player.getLocation();
+                double dx = pLoc.getX() - (x + 0.5);
+                double dy = pLoc.getY() - (y + 0.5);
+                double dz = pLoc.getZ() - (z + 0.5);
+                double distSq = dx * dx + dy * dy + dz * dz;
+                if (distSq <= maxDistSq && distSq < nearestDistSq) {
+                    nearest = player;
+                    nearestDistSq = distSq;
+                }
             }
+            return nearest;
+        } catch (Throwable t) {
+            for (Player player : world.getPlayers()) {
+                if (Bukkit.isOwnedByCurrentRegion(player)) {
+                    Location pLoc = player.getLocation();
+                    double dx = pLoc.getX() - (x + 0.5);
+                    double dy = pLoc.getY() - (y + 0.5);
+                    double dz = pLoc.getZ() - (z + 0.5);
+                    double distSq = dx * dx + dy * dy + dz * dz;
+                    if (distSq <= maxDistSq && distSq < nearestDistSq) {
+                        nearest = player;
+                        nearestDistSq = distSq;
+                    }
+                }
+            }
+            return nearest;
         }
-        return nearest;
     }
 
     private void saveSnapshotToDisk(Snapshot snap) {

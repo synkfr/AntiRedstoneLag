@@ -7,7 +7,7 @@
 
     <groupId>org.ayosynk</groupId>
     <artifactId>AntiRedstoneLag</artifactId>
-    <version>26.2</version>
+    <version>26.3</version>
     <packaging>jar</packaging>
 
     <name>AntiRedstoneLag</name>

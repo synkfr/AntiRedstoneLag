@@ -22,6 +22,7 @@ import org.bukkit.event.world.ChunkUnloadEvent;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -232,17 +233,25 @@ public class RedstoneListener implements Listener {
 
     private boolean hasPlayersNearby(World world, int x, int y, int z) {
         int radius = configManager.getPluginConfig().getProximity().getPlayerRadius();
-        int radiusSq = radius * radius;
-        for (Player player : world.getPlayers()) {
-            Location loc = player.getLocation();
-            double dx = loc.getX() - x;
-            double dy = loc.getY() - y;
-            double dz = loc.getZ() - z;
-            if ((dx * dx + dy * dy + dz * dz) <= radiusSq) {
-                return true;
+        Location loc = new Location(world, x + 0.5, y + 0.5, z + 0.5);
+        try {
+            Collection<Player> nearby = world.getNearbyPlayers(loc, radius, radius, radius);
+            return !nearby.isEmpty();
+        } catch (Throwable t) {
+            int radiusSq = radius * radius;
+            for (Player player : world.getPlayers()) {
+                if (Bukkit.isOwnedByCurrentRegion(player)) {
+                    Location pLoc = player.getLocation();
+                    double dx = pLoc.getX() - x;
+                    double dy = pLoc.getY() - y;
+                    double dz = pLoc.getZ() - z;
+                    if ((dx * dx + dy * dy + dz * dz) <= radiusSq) {
+                        return true;
+                    }
+                }
             }
+            return false;
         }
-        return false;
     }
 
     private void broadcastLockdownNotification(UUID worldId, String worldName, long chunkKey, int duration) {

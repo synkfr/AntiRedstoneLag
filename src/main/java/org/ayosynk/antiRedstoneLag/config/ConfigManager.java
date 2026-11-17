@@ -59,7 +59,7 @@ public class ConfigManager {
         if (!file.exists()) return;
         try {
             String content = Files.readString(file.toPath(), StandardCharsets.UTF_8);
-            if (!content.contains("config-version: \"26.2\"") && !content.contains("config-version: '26.2'")) {
+            if (!content.contains("config-version: \"26.3\"") && !content.contains("config-version: '26.3'")) {
                 File backupFile = new File(file.getParentFile(), file.getName() + ".bk");
                 Files.copy(file.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 plugin.getLogger().info("Created safety backup: " + file.getName() + " -> " + backupFile.getName());
