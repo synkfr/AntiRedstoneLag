@@ -61,6 +61,6 @@ The shaded jar is written to `target/AntiRedstoneLag-26.5.jar`.
 ## Links
 
 - Documentation: [synkfr.github.io/AntiRedstoneLag](https://synkfr.github.io/AntiRedstoneLag/)
-- Discord: [discord.gg/fGyDyp3Ak4](https://discord.gg/fGyDyp3Ak4)
+- Discord: [discord.gg/UAgsmk6KEr](https://discord.gg/UAgsmk6KEr)
 - Issues: [github.com/synkfr/AntiRedstoneLag/issues](https://github.com/synkfr/AntiRedstoneLag/issues)
 - License: [MIT](LICENSE)

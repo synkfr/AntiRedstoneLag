@@ -43,7 +43,7 @@ export default defineConfig({
     },
     socialLinks: [
       { icon: 'github', link: 'https://github.com/synkfr/AntiRedstoneLag' },
-      { icon: 'discord', link: 'https://discord.gg/fGyDyp3Ak4' }
+      { icon: 'discord', link: 'https://discord.gg/UAgsmk6KEr' }
     ]
   }
 })
