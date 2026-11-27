@@ -30,4 +30,9 @@ public interface Scheduler {
      * Run a task later on the region thread of a specific player.
      */
     void runTaskLater(Player player, Runnable task, long delay);
+
+    /**
+     * Run a task immediately on the region thread of a specific player.
+     */
+    void runTask(Player player, Runnable task);
 }

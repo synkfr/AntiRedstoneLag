@@ -3,9 +3,17 @@
 
 # IDE files
 .idea/
+.vscode/
 *.iml
 *.iws
 *.ipr
+
+# Docs build and cache
+docs/node_modules/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+.hallmark/
+dependency-reduced-pom.xml
 
 # OS files
 .DS_Store

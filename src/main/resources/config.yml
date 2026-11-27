@@ -1,8 +1,8 @@
 # AntiRedstoneLag Configuration
-# Advanced redstone lag prevention system
+# Redstone lag prevention, diagnostics, and entity cleanup
 
 # Internal configuration version - do not modify
-config-version: "26.3"
+config-version: "26.5"
 
 # Maximum redstone updates per chunk per reset interval
 chunk-threshold: 500
@@ -16,11 +16,14 @@ reset-interval-ticks: 20
 # Enable debug mode for verbose logging
 debug: false
 
+# Enable redstone protection and monitoring (toggleable via /arl redstone on|off|notify)
+redstone-enabled: true
+
 # Action to take when redstone exceeds threshold
-# Options: FREEZE (temporarily pause clock), DISABLE (cancel signal), DROP (break and drop item), REMOVE (set to air)
+# Options: FREEZE (pause clock temporarily), NOTIFY (alert admins only without throttling or breaking), DISABLE (cancel signal temporarily), DROP (break and drop item), REMOVE (set to air)
 removal-action: FREEZE
 
-# High-performance ground item & entity cleaner with countdown broadcasts
+# Ground item and entity cleaner with countdown broadcasts
 clearlagg:
   enabled: true
   # Automatic clear interval in seconds (300 = 5 minutes, 0 = disabled)
@@ -55,10 +58,10 @@ clearlagg:
     - "Boat !isMounted"
     - "Chest_Boat !isMounted"
     - "Minecart !isMounted"
-    - "Minecart_Chest !isMounted"
-    - "Minecart_Hopper !isMounted"
-    - "Minecart_Tnt"
-    - "Minecart_Furnace"
+    - "Chest_Minecart !isMounted"
+    - "Hopper_Minecart !isMounted"
+    - "Tnt_Minecart"
+    - "Furnace_Minecart"
     - "Tnt liveTime>100"
   # Entities that are 100% immune from clearing (SMP safe)
   entity-whitelist:
@@ -158,6 +161,10 @@ whitelist:
 alerts:
   enabled: true
   log-to-console: true
+  # Notify admins with culprit info when TPS drops below adaptive.min-tps or MSPT exceeds adaptive.target-mspt due to redstone
+  notify-on-tps-lag: true
+  # Only send redstone threshold/mitigation alerts when the server is lagging
+  only-when-lagging: false
 
 # Advanced logging system
 logging:

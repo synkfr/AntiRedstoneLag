@@ -33,8 +33,7 @@ public class AntiRedstoneLag extends JavaPlugin {
     private SnapshotManager snapshotManager;
     private ClearLaggManager clearLaggManager;
     private ConfigManager configManager;
-    @SuppressWarnings("unused")
-    private MetricsManager metricsManager;
+    private CommandHandler commandHandler;
     private UpdateChecker updateChecker;
     private Scheduler scheduler;
 
@@ -43,7 +42,7 @@ public class AntiRedstoneLag extends JavaPlugin {
         configManager = new ConfigManager(this);
         messageManager = new MessageManager(this);
         logManager = new LogManager(this);
-        metricsManager = new MetricsManager(this);
+        new MetricsManager(this);
         snapshotManager = new SnapshotManager(this, configManager, messageManager);
 
         try {
@@ -67,13 +66,14 @@ public class AntiRedstoneLag extends JavaPlugin {
 
         scheduler.runTaskTimerAsynchronously(logManager::cleanupOldLogs, TICKS_PER_HOUR, TICKS_PER_DAY);
 
+        commandHandler = new CommandHandler(this, configManager, messageManager, logManager, counterManager);
         this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
             commands.register(
                 "arl",
                 "Main AntiRedstoneLag command",
-                List.of(),
-                new CommandHandler(this, configManager, messageManager, logManager, counterManager)
+                List.of("antiredstonelag"),
+                commandHandler
             );
         });
 
@@ -88,6 +88,10 @@ public class AntiRedstoneLag extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (commandHandler != null) {
+            commandHandler.cleanup();
+        }
+
         if (messageManager != null && messageManager.getMessagesConfig() != null) {
             String disabledMsg = messageManager.getMessagesConfig().getMessages().getDisabled();
             getServer().getConsoleSender().sendMessage(messageManager.parseMessage(disabledMsg));

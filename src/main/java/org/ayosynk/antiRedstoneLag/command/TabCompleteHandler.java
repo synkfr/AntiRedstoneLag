@@ -11,10 +11,6 @@ public class TabCompleteHandler {
 
     private final AntiRedstoneLag plugin;
 
-    public TabCompleteHandler() {
-        this.plugin = null;
-    }
-
     public TabCompleteHandler(AntiRedstoneLag plugin) {
         this.plugin = plugin;
     }
@@ -24,6 +20,12 @@ public class TabCompleteHandler {
 
         if (args == null || args.length == 0 || args.length == 1) {
             String partial = (args != null && args.length > 0) ? args[0].toLowerCase() : "";
+            if ("redstone".startsWith(partial) && (sender.isOp() || sender.hasPermission("antiredstonelag.redstone"))) {
+                completions.add("redstone");
+            }
+            if ("alerts".startsWith(partial) && (sender.isOp() || sender.hasPermission("antiredstonelag.alerts"))) {
+                completions.add("alerts");
+            }
             if ("reload".startsWith(partial) && (sender.isOp() || sender.hasPermission("antiredstonelag.reload"))) {
                 completions.add("reload");
             }
@@ -53,7 +55,19 @@ public class TabCompleteHandler {
             String sub = args[0].toLowerCase();
             String partial = args[1].toLowerCase();
 
-            if (sub.equals("logs") && (sender.isOp() || sender.hasPermission("antiredstonelag.logs"))) {
+            if (sub.equals("redstone") && (sender.isOp() || sender.hasPermission("antiredstonelag.redstone"))) {
+                for (String opt : List.of("on", "off", "notify", "status")) {
+                    if (opt.startsWith(partial)) {
+                        completions.add(opt);
+                    }
+                }
+            } else if (sub.equals("alerts") && (sender.isOp() || sender.hasPermission("antiredstonelag.alerts"))) {
+                for (String opt : List.of("on", "off", "status")) {
+                    if (opt.startsWith(partial)) {
+                        completions.add(opt);
+                    }
+                }
+            } else if (sub.equals("logs") && (sender.isOp() || sender.hasPermission("antiredstonelag.logs"))) {
                 if ("download".startsWith(partial)) {
                     completions.add("download");
                 }

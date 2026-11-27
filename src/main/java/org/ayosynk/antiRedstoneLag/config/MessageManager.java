@@ -3,6 +3,7 @@ package org.ayosynk.antiRedstoneLag.config;
 import eu.okaeri.configs.serdes.commons.SerdesCommons;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
 import eu.okaeri.configs.yaml.snakeyaml.YamlSnakeYamlConfigurer;
+import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -12,17 +13,42 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MessageManager {
     private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
-    private static final Pattern LEGACY_HEX_PATTERN = Pattern.compile("&x(&[A-Fa-f0-9]){6}");
+    private static final Pattern LEGACY_CODE_PATTERN = Pattern.compile("&([0-9a-fk-orA-FK-OR])");
+    private static final Map<Character, String> LEGACY_TAGS = Map.ofEntries(
+            Map.entry('0', "<black>"),
+            Map.entry('1', "<dark_blue>"),
+            Map.entry('2', "<dark_green>"),
+            Map.entry('3', "<dark_aqua>"),
+            Map.entry('4', "<dark_red>"),
+            Map.entry('5', "<dark_purple>"),
+            Map.entry('6', "<gold>"),
+            Map.entry('7', "<gray>"),
+            Map.entry('8', "<dark_gray>"),
+            Map.entry('9', "<blue>"),
+            Map.entry('a', "<green>"),
+            Map.entry('b', "<aqua>"),
+            Map.entry('c', "<red>"),
+            Map.entry('d', "<light_purple>"),
+            Map.entry('e', "<yellow>"),
+            Map.entry('f', "<white>"),
+            Map.entry('k', "<obfuscated>"),
+            Map.entry('l', "<bold>"),
+            Map.entry('m', "<strikethrough>"),
+            Map.entry('n', "<underlined>"),
+            Map.entry('o', "<italic>"),
+            Map.entry('r', "<reset>")
+    );
 
     private final JavaPlugin plugin;
     private MessagesConfig messagesConfig;
-    private final MiniMessage miniMessage = MiniMessage.miniMessage();
-    private final LegacyComponentSerializer legacySerializer = LegacyComponentSerializer.builder()
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.builder()
             .character('&')
             .hexColors()
             .extractUrls()
@@ -69,15 +95,18 @@ public class MessageManager {
     }
 
     public Component parseMessage(String message) {
-        if (message == null || message.isEmpty()) return Component.empty();
+        return parseComponent(message);
+    }
+
+    public static Component parseComponent(String message) {
+        if (message == null || message.isBlank()) return Component.empty();
 
         String formatted = message;
         if (formatted.contains("&#")) {
             Matcher matcher = HEX_PATTERN.matcher(formatted);
             StringBuilder sb = new StringBuilder();
             while (matcher.find()) {
-                String hex = matcher.group(1);
-                matcher.appendReplacement(sb, "<#" + hex + ">");
+                matcher.appendReplacement(sb, "<#" + matcher.group(1) + ">");
             }
             matcher.appendTail(sb);
             formatted = sb.toString();
@@ -86,39 +115,39 @@ public class MessageManager {
         if (formatted.contains("<") && formatted.contains(">")) {
             formatted = legacyToMiniMessage(formatted);
             try {
-                return miniMessage.deserialize(formatted);
+                return MINI_MESSAGE.deserialize(formatted);
             } catch (Exception ignored) {
             }
         }
 
-        return legacySerializer.deserialize(message);
+        return LEGACY_SERIALIZER.deserialize(message);
     }
 
-    private String legacyToMiniMessage(String input) {
-        return input.replace("&0", "<black>")
-                    .replace("&1", "<dark_blue>")
-                    .replace("&2", "<dark_green>")
-                    .replace("&3", "<dark_aqua>")
-                    .replace("&4", "<dark_red>")
-                    .replace("&5", "<dark_purple>")
-                    .replace("&6", "<gold>")
-                    .replace("&7", "<gray>")
-                    .replace("&8", "<dark_gray>")
-                    .replace("&9", "<blue>")
-                    .replace("&a", "<green>")
-                    .replace("&b", "<aqua>")
-                    .replace("&c", "<red>")
-                    .replace("&d", "<light_purple>")
-                    .replace("&e", "<yellow>")
-                    .replace("&f", "<white>")
-                    .replace("&l", "<bold>")
-                    .replace("&m", "<strikethrough>")
-                    .replace("&n", "<underlined>")
-                    .replace("&o", "<italic>")
-                    .replace("&r", "<reset>");
+    public boolean sendIfNotBlank(Audience target, String rawTemplate, Component rendered) {
+        if (target == null || rawTemplate == null || rawTemplate.isBlank()) return false;
+        target.sendMessage(rendered);
+        return true;
+    }
+
+    public boolean sendIfNotBlank(Audience target, String rawMessage) {
+        if (target == null || rawMessage == null || rawMessage.isBlank()) return false;
+        target.sendMessage(parseMessage(rawMessage));
+        return true;
+    }
+
+    private static String legacyToMiniMessage(String input) {
+        Matcher matcher = LEGACY_CODE_PATTERN.matcher(input);
+        StringBuilder sb = new StringBuilder(input.length());
+        while (matcher.find()) {
+            char code = Character.toLowerCase(matcher.group(1).charAt(0));
+            String tag = LEGACY_TAGS.get(code);
+            matcher.appendReplacement(sb, tag != null ? tag : matcher.group(0));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 
     public String getMessageString(String message) {
-        return legacySerializer.serialize(parseMessage(message));
+        return LEGACY_SERIALIZER.serialize(parseMessage(message));
     }
 }

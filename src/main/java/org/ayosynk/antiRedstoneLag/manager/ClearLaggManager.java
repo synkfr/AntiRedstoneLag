@@ -49,6 +49,8 @@ public class ClearLaggManager {
         }
     }
 
+    private static final long EMERGENCY_CLEAR_COOLDOWN_MS = 30000L;
+
     private final AntiRedstoneLag plugin;
     private final ConfigManager configManager;
     private final MessageManager messageManager;
@@ -56,6 +58,7 @@ public class ClearLaggManager {
     private final AtomicInteger secondsUntilClear = new AtomicInteger(300);
     private volatile boolean timerRunning = false;
     private final AtomicBoolean clearingInProgress = new AtomicBoolean(false);
+    private volatile long lastEmergencyClearTime = 0L;
 
     private volatile List<EntityFilterRule> cachedWhitelistRules = new ArrayList<>();
     private volatile List<EntityFilterRule> cachedRemoveRules = new ArrayList<>();
@@ -70,19 +73,28 @@ public class ClearLaggManager {
 
     public void reloadRules() {
         PluginConfig.ClearLaggConfig cfg = configManager.getPluginConfig().getClearlagg();
-        List<EntityFilterRule> wList = new ArrayList<>();
-        for (String ruleStr : cfg.getEntityWhitelist()) {
-            EntityFilterRule r = EntityFilterRule.parse(ruleStr);
-            if (r != null) wList.add(r);
-        }
-        this.cachedWhitelistRules = wList;
+        this.cachedWhitelistRules = parseRules(cfg.getEntityWhitelist(), "entity-whitelist");
+        this.cachedRemoveRules = parseRules(cfg.getRemoveEntities(), "remove-entities");
 
-        List<EntityFilterRule> rList = new ArrayList<>();
-        for (String ruleStr : cfg.getRemoveEntities()) {
-            EntityFilterRule r = EntityFilterRule.parse(ruleStr);
-            if (r != null) rList.add(r);
+        int interval = cfg.getIntervalSeconds();
+        if (interval > 0 && secondsUntilClear.get() > interval) {
+            secondsUntilClear.set(interval);
         }
-        this.cachedRemoveRules = rList;
+    }
+
+    private List<EntityFilterRule> parseRules(List<String> rawRules, String sectionName) {
+        List<EntityFilterRule> parsed = new ArrayList<>();
+        if (rawRules == null) return parsed;
+        for (String ruleStr : rawRules) {
+            EntityFilterRule rule = EntityFilterRule.parse(ruleStr);
+            if (rule == null) continue;
+            if (!rule.isValid()) {
+                plugin.getLogger().warning("Ignoring unknown ClearLagg entity rule in " + sectionName + ": " + ruleStr);
+                continue;
+            }
+            parsed.add(rule);
+        }
+        return parsed;
     }
 
     public void startAutoClearTask() {
@@ -107,11 +119,18 @@ public class ClearLaggManager {
                 secondsUntilClear.set(cfg.getIntervalSeconds());
             }
 
-            if (cfg.getTpsEmergencyThreshold() > 0.0) {
-                double tps = Bukkit.getTPS()[0];
-                if (tps <= cfg.getTpsEmergencyThreshold()) {
-                    clearEntities(ClearType.AUTO);
-                    secondsUntilClear.set(cfg.getIntervalSeconds());
+            if (!CounterManager.isFolia() && cfg.getTpsEmergencyThreshold() > 0.0) {
+                long now = System.currentTimeMillis();
+                if (now - lastEmergencyClearTime >= EMERGENCY_CLEAR_COOLDOWN_MS) {
+                    try {
+                        double tps = Bukkit.getTPS()[0];
+                        if (tps <= cfg.getTpsEmergencyThreshold()) {
+                            lastEmergencyClearTime = now;
+                            clearEntities(ClearType.AUTO);
+                            secondsUntilClear.set(cfg.getIntervalSeconds());
+                        }
+                    } catch (Throwable ignored) {
+                    }
                 }
             }
         }, 20L, 20L);
@@ -253,8 +272,9 @@ public class ClearLaggManager {
     }
 
     private void broadcastCleared(int removed) {
-        Component clearedMsg = messageManager.parseMessage(
-                messageManager.getMessagesConfig().getClearlagg().getCleared())
+        String raw = messageManager.getMessagesConfig().getClearlagg().getCleared();
+        if (raw == null || raw.isBlank()) return;
+        Component clearedMsg = messageManager.parseMessage(raw)
                 .replaceText(t -> t.matchLiteral("{count}").replacement(String.valueOf(removed)));
 
         for (Player player : Bukkit.getOnlinePlayers()) {

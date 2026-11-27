@@ -4,9 +4,6 @@ import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import eu.okaeri.configs.annotation.Header;
-import eu.okaeri.configs.annotation.Names;
-import eu.okaeri.configs.annotation.NameStrategy;
-import eu.okaeri.configs.annotation.NameModifier;
 import org.bukkit.Material;
 
 import java.util.Arrays;
@@ -14,13 +11,13 @@ import java.util.List;
 
 @Header({
     "AntiRedstoneLag Configuration",
-    "Advanced redstone lag prevention system"
+    "Redstone lag prevention, diagnostics, and entity cleanup"
 })
-@Names(strategy = NameStrategy.HYPHEN_CASE, modifier = NameModifier.TO_LOWER_CASE)
 public class PluginConfig extends OkaeriConfig {
 
     public enum RemovalAction {
         FREEZE,
+        NOTIFY,
         DISABLE,
         DROP,
         REMOVE
@@ -37,7 +34,7 @@ public class PluginConfig extends OkaeriConfig {
 
     @CustomKey("config-version")
     @Comment("Internal configuration version - do not modify")
-    private String configVersion = "26.3";
+    private String configVersion = "26.5";
 
     @CustomKey("chunk-threshold")
     @Comment("Maximum redstone updates per chunk per reset interval")
@@ -55,10 +52,14 @@ public class PluginConfig extends OkaeriConfig {
     @Comment("Enable debug mode for verbose logging")
     private boolean debug = false;
 
+    @CustomKey("redstone-enabled")
+    @Comment("Enable redstone protection and monitoring (toggleable with /arl redstone on|off|notify)")
+    private boolean redstoneEnabled = true;
+
     @CustomKey("removal-action")
     @Comment({
         "Action to take when redstone exceeds threshold",
-        "Options: FREEZE (temporarily pause clock), DISABLE (cancel signal), DROP (break and drop item), REMOVE (set to air)"
+        "Options: FREEZE (pause clock temporarily), NOTIFY (alert admins only without breaking or throttling), DISABLE (cancel signal temporarily), DROP (break and drop item), REMOVE (set to air)"
     })
     private RemovalAction removalAction = RemovalAction.FREEZE;
 
@@ -188,10 +189,10 @@ public class PluginConfig extends OkaeriConfig {
                 "Boat !isMounted",
                 "Chest_Boat !isMounted",
                 "Minecart !isMounted",
-                "Minecart_Chest !isMounted",
-                "Minecart_Hopper !isMounted",
-                "Minecart_Tnt",
-                "Minecart_Furnace",
+                "Chest_Minecart !isMounted",
+                "Hopper_Minecart !isMounted",
+                "Tnt_Minecart",
+                "Furnace_Minecart",
                 "Tnt liveTime>100"
         );
 
@@ -354,11 +355,11 @@ public class PluginConfig extends OkaeriConfig {
         }
 
         public double getTargetMspt() {
-            return targetMspt;
+            return Math.max(5.0, targetMspt);
         }
 
         public double getMinTps() {
-            return minTps;
+            return Math.max(1.0, Math.min(20.0, minTps));
         }
 
         public double getHealthyHeadroomMultiplier() {
@@ -434,7 +435,7 @@ public class PluginConfig extends OkaeriConfig {
         }
 
         public int getThresholdPercent() {
-            return thresholdPercent;
+            return Math.max(1, Math.min(100, thresholdPercent));
         }
     }
 
@@ -462,12 +463,32 @@ public class PluginConfig extends OkaeriConfig {
         @CustomKey("log-to-console")
         private boolean logToConsole = true;
 
+        @CustomKey("notify-on-tps-lag")
+        @Comment("Notify admins with culprit info when TPS drops below adaptive.min-tps or MSPT exceeds adaptive.target-mspt due to redstone")
+        private boolean notifyOnTpsLag = true;
+
+        @CustomKey("only-when-lagging")
+        @Comment("Only send redstone threshold/mitigation alerts when the server is lagging")
+        private boolean onlyWhenLagging = false;
+
         public boolean isEnabled() {
             return enabled;
         }
 
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
         public boolean isLogToConsole() {
             return logToConsole;
+        }
+
+        public boolean isNotifyOnTpsLag() {
+            return notifyOnTpsLag;
+        }
+
+        public boolean isOnlyWhenLagging() {
+            return onlyWhenLagging;
         }
     }
 
@@ -496,11 +517,11 @@ public class PluginConfig extends OkaeriConfig {
         }
 
         public int getMaxFiles() {
-            return maxFiles;
+            return Math.max(1, maxFiles);
         }
 
         public long getMaxSizeMb() {
-            return maxSizeMb;
+            return Math.max(1, maxSizeMb);
         }
 
         public boolean isPerformanceStats() {
@@ -528,8 +549,20 @@ public class PluginConfig extends OkaeriConfig {
         return debug;
     }
 
+    public boolean isRedstoneEnabled() {
+        return redstoneEnabled;
+    }
+
+    public void setRedstoneEnabled(boolean redstoneEnabled) {
+        this.redstoneEnabled = redstoneEnabled;
+    }
+
     public RemovalAction getRemovalAction() {
         return removalAction != null ? removalAction : RemovalAction.FREEZE;
+    }
+
+    public void setRemovalAction(RemovalAction removalAction) {
+        this.removalAction = removalAction != null ? removalAction : RemovalAction.FREEZE;
     }
 
     public ClearLaggConfig getClearlagg() {

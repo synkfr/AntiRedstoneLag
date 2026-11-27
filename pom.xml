@@ -7,7 +7,7 @@
 
     <groupId>org.ayosynk</groupId>
     <artifactId>AntiRedstoneLag</artifactId>
-    <version>26.3</version>
+    <version>26.5</version>
     <packaging>jar</packaging>
 
     <name>AntiRedstoneLag</name>
@@ -17,6 +17,7 @@
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <okaeri.version>5.0.13</okaeri.version>
+        <junit.version>5.13.1</junit.version>
     </properties>
 
     <build>
@@ -25,15 +26,20 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
+                <version>3.16.0</version>
                 <configuration>
                     <release>${maven.compiler.release}</release>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.3</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.0</version>
+                <version>3.6.2</version>
                 <configuration>
                     <relocations>
                         <relocation>
@@ -54,6 +60,7 @@
                         </relocation>
                     </relocations>
                     <minimizeJar>true</minimizeJar>
+                    <createDependencyReducedPom>false</createDependencyReducedPom>
                 </configuration>
                 <executions>
                     <execution>
@@ -93,21 +100,21 @@
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>1.21.4-R0.1-SNAPSHOT</version>
+            <version>1.21.11-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.bstats</groupId>
             <artifactId>bstats-bukkit</artifactId>
-            <version>3.1.0</version>
+            <version>3.2.1</version>
             <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>it.unimi.dsi</groupId>
             <artifactId>fastutil</artifactId>
-            <version>8.5.15</version>
+            <version>8.5.19</version>
             <scope>compile</scope>
         </dependency>
 
@@ -130,6 +137,13 @@
             <artifactId>okaeri-configs-serdes-commons</artifactId>
             <version>${okaeri.version}</version>
             <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

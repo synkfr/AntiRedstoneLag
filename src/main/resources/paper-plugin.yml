@@ -2,7 +2,7 @@ name: AntiRedstoneLag
 version: '${project.version}'
 main: org.ayosynk.antiRedstoneLag.AntiRedstoneLag
 api-version: '1.21'
-description: Premium redstone lag prevention system with advanced monitoring
+description: Redstone lag prevention, diagnostics, and entity cleanup for Paper and Folia
 authors:
   - AyoSynk
 website: https://modrinth.com/plugin/antiredstonelag
@@ -17,6 +17,7 @@ permissions:
       antiredstonelag.stats: true
       antiredstonelag.logs: true
       antiredstonelag.alerts: true
+      antiredstonelag.redstone: true
       antiredstonelag.bypass: true
       antiredstonelag.hotspots: true
       antiredstonelag.inspect: true
@@ -36,7 +37,10 @@ permissions:
     description: Access logging system
     default: op
   antiredstonelag.alerts:
-    description: Receive redstone removal alerts
+    description: Receive and toggle redstone alerts
+    default: op
+  antiredstonelag.redstone:
+    description: Toggle redstone protection and notification-only mode
     default: op
   antiredstonelag.bypass:
     description: Bypass redstone limits

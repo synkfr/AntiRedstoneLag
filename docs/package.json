@@ -1,0 +1,13 @@
+{
+  "name": "antiredstonelag-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview --port 4173"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}

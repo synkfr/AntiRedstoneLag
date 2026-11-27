@@ -12,14 +12,16 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.SimpleDateFormat;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,6 +32,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SnapshotManager {
     private static final long SNAPSHOT_COOLDOWN_MS = 60000L;
+    private static final DateTimeFormatter SNAPSHOT_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
 
     public static class BlockEntry {
         public final int relX, relY, relZ;
@@ -126,9 +130,14 @@ public class SnapshotManager {
 
         String culpritName = "Unknown";
         if (culpritUuid != null) {
-            OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(culpritUuid);
-            if (offlinePlayer.getName() != null) {
-                culpritName = offlinePlayer.getName();
+            Player online = Bukkit.getPlayer(culpritUuid);
+            if (online != null) {
+                culpritName = online.getName();
+            } else {
+                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(culpritUuid);
+                if (offlinePlayer.getName() != null) {
+                    culpritName = offlinePlayer.getName();
+                }
             }
         } else {
             Player nearest = findNearestPlayer(world, centerX, centerY, centerZ, 48);
@@ -146,9 +155,10 @@ public class SnapshotManager {
 
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
+                int x = centerX + dx;
+                int z = centerZ + dz;
+                if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
                 for (int y = minY; y <= maxY; y++) {
-                    int x = centerX + dx;
-                    int z = centerZ + dz;
                     Block block = world.getBlockAt(x, y, z);
                     Material mat = block.getType();
                     if (configManager.getRedstoneMaterials().contains(mat)) {
@@ -179,26 +189,30 @@ public class SnapshotManager {
             plugin.getScheduler().runTaskAsynchronously(() -> saveSnapshotToDisk(snapToSave));
         }
 
-        final String finalCulprit = culpritName;
-        plugin.getScheduler().runTaskAsynchronously(() -> {
-            net.kyori.adventure.text.Component alert = messageManager.parseMessage(
-                    messageManager.getMessagesConfig().getCommands().getSnapshotCaptured())
-                    .replaceText(t -> t.matchLiteral("{id}").replacement(snapshotId))
-                    .replaceText(t -> t.matchLiteral("{material}").replacement(triggerMaterial.toString()))
-                    .replaceText(t -> t.matchLiteral("{x}").replacement(String.valueOf(centerX)))
-                    .replaceText(t -> t.matchLiteral("{y}").replacement(String.valueOf(centerY)))
-                    .replaceText(t -> t.matchLiteral("{z}").replacement(String.valueOf(centerZ)))
-                    .replaceText(t -> t.matchLiteral("{culprit}").replacement(finalCulprit));
+        if (configManager.isAlertsEnabled()) {
+            final String finalCulprit = culpritName;
+            final String raw = messageManager.getMessagesConfig().getCommands().getSnapshotCaptured();
+            if (raw != null && !raw.isBlank()) {
+                plugin.getScheduler().runTaskAsynchronously(() -> {
+                    net.kyori.adventure.text.Component alert = messageManager.parseMessage(raw)
+                            .replaceText(t -> t.matchLiteral("{id}").replacement(snapshotId))
+                            .replaceText(t -> t.matchLiteral("{material}").replacement(triggerMaterial.toString()))
+                            .replaceText(t -> t.matchLiteral("{x}").replacement(String.valueOf(centerX)))
+                            .replaceText(t -> t.matchLiteral("{y}").replacement(String.valueOf(centerY)))
+                            .replaceText(t -> t.matchLiteral("{z}").replacement(String.valueOf(centerZ)))
+                            .replaceText(t -> t.matchLiteral("{culprit}").replacement(finalCulprit));
 
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                if (player.hasPermission("antiredstonelag.snapshot")) {
-                    player.sendMessage(alert);
-                }
+                    for (Player player : Bukkit.getOnlinePlayers()) {
+                        if (player.hasPermission("antiredstonelag.snapshot")) {
+                            player.sendMessage(alert);
+                        }
+                    }
+                    if (configManager.isLogToConsole()) {
+                        Bukkit.getConsoleSender().sendMessage(alert);
+                    }
+                });
             }
-            if (configManager.isLogToConsole()) {
-                Bukkit.getConsoleSender().sendMessage(alert);
-            }
-        });
+        }
 
         return snapshot;
     }
@@ -246,14 +260,13 @@ public class SnapshotManager {
             snapshotDir.mkdirs();
         }
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         File file = new File(snapshotDir, "snapshot-" + snap.id + ".txt");
 
-        try (PrintWriter pw = new PrintWriter(new FileWriter(file))) {
+        try (PrintWriter pw = new PrintWriter(Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8))) {
             pw.println("=================================================");
             pw.println("   AntiRedstoneLag Forensic Snapshot: " + snap.id);
             pw.println("=================================================");
-            pw.println("Captured At : " + sdf.format(new Date(snap.timestamp)));
+            pw.println("Captured At : " + SNAPSHOT_DATE_FORMAT.format(Instant.ofEpochMilli(snap.timestamp)));
             pw.println("Location    : " + snap.x + ", " + snap.y + ", " + snap.z + " in world '" + snap.worldName + "'");
             pw.println("Culprit     : " + snap.culpritName + " (" + (snap.culpritUuid != null ? snap.culpritUuid : "N/A") + ")");
             pw.println("Trigger     : " + snap.triggerMaterial);
@@ -263,7 +276,7 @@ public class SnapshotManager {
             pw.println();
             pw.println("--- Component Breakdown ---");
             for (Map.Entry<Material, Integer> entry : snap.componentCounts.entrySet()) {
-                pw.printf("  • %-24s : %d%n", entry.getKey().name(), entry.getValue());
+                pw.printf("  - %-24s : %d%n", entry.getKey().name(), entry.getValue());
             }
             pw.println();
             pw.println("--- Block Layout Detail (Relative to center) ---");
@@ -288,6 +301,7 @@ public class SnapshotManager {
     }
 
     public Snapshot getSnapshot(String id) {
+        if (id == null) return null;
         synchronized (snapshots) {
             return snapshots.get(id.toUpperCase());
         }

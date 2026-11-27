@@ -3,15 +3,11 @@ package org.ayosynk.antiRedstoneLag.config;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.CustomKey;
 import eu.okaeri.configs.annotation.Header;
-import eu.okaeri.configs.annotation.Names;
-import eu.okaeri.configs.annotation.NameStrategy;
-import eu.okaeri.configs.annotation.NameModifier;
 
 @Header({
     "AntiRedstoneLag Messages",
     "Supports & color codes, MiniMessage tags, and &#RRGGBB hex colors"
 })
-@Names(strategy = NameStrategy.HYPHEN_CASE, modifier = NameModifier.TO_LOWER_CASE)
 public class MessagesConfig extends OkaeriConfig {
 
     @CustomKey("alerts")
@@ -34,13 +30,25 @@ public class MessagesConfig extends OkaeriConfig {
         private String chunkLockdownLocal = "&#FF6B6B[!] &cThe chunk you are standing in has been locked down for &e{duration}s &cdue to extreme redstone lag!";
 
         @CustomKey("clock-frozen")
-        private String clockFrozen = "&#FFD93D⚠ &eClock at &6{x}, {y}, {z} &epause-throttled for &c{duration}s &e(high frequency). Auto-resuming soon.";
+        private String clockFrozen = "&#FFD93D[!] &eClock at &6{x}, {y}, {z} &epause-throttled for &c{duration}s &e(high frequency). Auto-resuming soon.";
 
         @CustomKey("clock-resumed")
         private String clockResumed = "&#4ECDC4✓ &aClock at &6{x}, {y}, {z} &ahas resumed operation.";
 
+        @CustomKey("redstone-notify")
+        private String redstoneNotify = "&#FFD93D[!] &eHigh redstone activity at &6{x}, {y}, {z} &7({world}) &8| &e{material} &8| &7Chunk: &b{chunk_count} &7Block: &b{block_count} &8| &7Culprit: &c{culprit}";
+
+        @CustomKey("tps-lag-culprit")
+        private String tpsLagCulprit = "&#FF6B6B[!] &cLag detected &7(TPS: &e{tps} &7| MSPT: &e{mspt}ms&7) &8- &7Redstone at &6{x}, {y}, {z} &7({world}) &8| &7Chunk: &b{chunk_count} &7Block: &b{block_count} &8| &7Culprit: &c{culprit}";
+
+        @CustomKey("component-paused")
+        private String componentPaused = "&#FFD93D[!] &eThis redstone component is paused for &6{duration}s &edue to high frequency.";
+
+        @CustomKey("chunk-locked-interact")
+        private String chunkLockedInteract = "&#FF6B6B[!] &cRedstone in this chunk is locked for &e{duration}s &cdue to lag.";
+
         @CustomKey("redstone-removed")
-        private String redstoneRemoved = "&#FF6B6B┌─ &c⚠ Lag Machine Detected &7─┐\n" +
+        private String redstoneRemoved = "&#FF6B6B┌─ &c[!] Lag Machine Detected &7─┐\n" +
                 "&7│ &6Coordinates: &e{x}, {y}, {z} &7│\n" +
                 "&7│ &6World: &e{world} &7│\n" +
                 "&7│ &6Block: &e{material} &7│\n" +
@@ -48,7 +56,7 @@ public class MessagesConfig extends OkaeriConfig {
                 "&#FF6B6B└─ &7Removed for server performance ─┘";
 
         @CustomKey("redstone-warning")
-        private String redstoneWarning = "&#FFD93D⚠ &eWarning: &7Redstone activity at &e{x}, {y}, {z} &7is at &c{percent}% &7of threshold!";
+        private String redstoneWarning = "&#FFD93D[!] &eWarning: &7Redstone activity at &e{x}, {y}, {z} &7is at &c{percent}% &7of threshold!";
 
         public String getChunkLockdownAdmin() {
             return chunkLockdownAdmin;
@@ -64,6 +72,22 @@ public class MessagesConfig extends OkaeriConfig {
 
         public String getClockResumed() {
             return clockResumed;
+        }
+
+        public String getRedstoneNotify() {
+            return redstoneNotify;
+        }
+
+        public String getTpsLagCulprit() {
+            return tpsLagCulprit;
+        }
+
+        public String getComponentPaused() {
+            return componentPaused;
+        }
+
+        public String getChunkLockedInteract() {
+            return chunkLockedInteract;
         }
 
         public String getRedstoneRemoved() {
@@ -198,8 +222,31 @@ public class MessagesConfig extends OkaeriConfig {
         @CustomKey("no-permission")
         private String noPermission = "&#FF6B6B✗ &cYou don't have permission to use this command!";
 
+        @CustomKey("redstone-on")
+        private String redstoneOn = "&#4ECDC4✓ &aRedstone protection enabled &7(action: &e{action}&7).";
+
+        @CustomKey("redstone-off")
+        private String redstoneOff = "&#FFD93D[!] &eRedstone protection disabled. Redstone contraptions will run without throttling or removal.";
+
+        @CustomKey("redstone-notify")
+        private String redstoneNotify = "&#4ECDC4✓ &aRedstone protection set to notification-only mode. Farms will run untouched and admins will be alerted.";
+
+        @CustomKey("redstone-status")
+        private String redstoneStatus = "&#4ECDC4[ARL] &7Redstone protection: {status} &8| &7Action: &e{action} &8| &7Alerts: {alerts}";
+
+        @CustomKey("alerts-on")
+        private String alertsOn = "&#4ECDC4✓ &aAdmin lag and redstone alerts enabled.";
+
+        @CustomKey("alerts-off")
+        private String alertsOff = "&#FFD93D[!] &eAdmin lag and redstone alerts disabled.";
+
+        @CustomKey("alerts-status")
+        private String alertsStatus = "&#4ECDC4[ARL] &7Alerts: {status} &8| &7TPS lag alerts: {tps_lag} &8| &7Only when lagging: {only_lag}";
+
         @CustomKey("help")
         private String help = "&#FFD93D┌─ &6AntiRedstoneLag &7v{version} ──────────┐\n" +
+                "&6/arl redstone  &7- Toggle protection (on/off/notify/status)\n" +
+                "&6/arl alerts    &7- Toggle admin lag alerts (on/off/status)\n" +
                 "&6/arl reload    &7- Reload configuration and messages\n" +
                 "&6/arl stats     &7- View plugin statistics\n" +
                 "&6/arl logs      &7- View or download logs\n" +
@@ -276,6 +323,34 @@ public class MessagesConfig extends OkaeriConfig {
 
         public String getNoPermission() {
             return noPermission;
+        }
+
+        public String getRedstoneOn() {
+            return redstoneOn;
+        }
+
+        public String getRedstoneOff() {
+            return redstoneOff;
+        }
+
+        public String getRedstoneNotify() {
+            return redstoneNotify;
+        }
+
+        public String getRedstoneStatus() {
+            return redstoneStatus;
+        }
+
+        public String getAlertsOn() {
+            return alertsOn;
+        }
+
+        public String getAlertsOff() {
+            return alertsOff;
+        }
+
+        public String getAlertsStatus() {
+            return alertsStatus;
         }
 
         public String getHelp() {

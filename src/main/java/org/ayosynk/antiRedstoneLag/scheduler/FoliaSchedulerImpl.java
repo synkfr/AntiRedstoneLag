@@ -37,4 +37,9 @@ public class FoliaSchedulerImpl implements Scheduler {
     public void runTaskLater(Player player, Runnable task, long delay) {
         player.getScheduler().runDelayed(plugin, t -> task.run(), null, Math.max(1, delay));
     }
+
+    @Override
+    public void runTask(Player player, Runnable task) {
+        player.getScheduler().run(plugin, t -> task.run(), null);
+    }
 }

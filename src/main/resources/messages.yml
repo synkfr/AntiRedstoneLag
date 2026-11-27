@@ -4,21 +4,25 @@
 alerts:
   chunk-lockdown-admin: "&#FF6B6B[!] &cChunk Lockdown Triggered! &7World: &e{world} &7Chunk: &e{chunkX}, {chunkZ} &7Duration: &e{duration}s"
   chunk-lockdown-local: "&#FF6B6B[!] &cThe chunk you are standing in has been locked down for &e{duration}s &cdue to extreme redstone lag!"
-  clock-frozen: "&#FFD93D⚠ &eClock at &6{x}, {y}, {z} &epause-throttled for &c{duration}s &e(high frequency). Auto-resuming soon."
+  clock-frozen: "&#FFD93D[!] &eClock at &6{x}, {y}, {z} &epause-throttled for &c{duration}s &e(high frequency). Auto-resuming soon."
   clock-resumed: "&#4ECDC4✓ &aClock at &6{x}, {y}, {z} &ahas resumed operation."
+  redstone-notify: "&#FFD93D[!] &eHigh redstone activity at &6{x}, {y}, {z} &7({world}) &8| &e{material} &8| &7Chunk: &b{chunk_count} &7Block: &b{block_count} &8| &7Culprit: &c{culprit}"
+  tps-lag-culprit: "&#FF6B6B[!] &cLag detected &7(TPS: &e{tps} &7| MSPT: &e{mspt}ms&7) &8- &7Redstone at &6{x}, {y}, {z} &7({world}) &8| &7Chunk: &b{chunk_count} &7Block: &b{block_count} &8| &7Culprit: &c{culprit}"
+  component-paused: "&#FFD93D[!] &eThis redstone component is paused for &6{duration}s &edue to high frequency."
+  chunk-locked-interact: "&#FF6B6B[!] &cRedstone in this chunk is locked for &e{duration}s &cdue to lag."
   redstone-removed: |-
-    &#FF6B6B┌─ &c⚠ Lag Machine Detected &7─┐
+    &#FF6B6B┌─ &c[!] Lag Machine Detected &7─┐
     &7│ &6Coordinates: &e{x}, {y}, {z} &7│
     &7│ &6World: &e{world} &7│
     &7│ &6Block: &e{material} &7│
     &7│ &6Chunk Updates: &e{chunk_count} &7│ &6Block Updates: &e{block_count} &7│
     &#FF6B6B└─ &7Removed for server performance ─┘
-  redstone-warning: "&#FFD93D⚠ &eWarning: &7Redstone activity at &e{x}, {y}, {z} &7is at &c{percent}% &7of threshold!"
+  redstone-warning: "&#FFD93D[!] &eWarning: &7Redstone activity at &e{x}, {y}, {z} &7is at &c{percent}% &7of threshold!"
 
 clearlagg:
   warning-chat: "&#FFD93D[ClearLagg] &eGround items & lag entities will be cleared in &c{seconds}s&e!"
   warning-actionbar: "<gold>ClearLagg <dark_gray>| <yellow>Clearing ground items in <red>{seconds}s</red>!"
-  warning-title: "<red>⚡ ClearLagg ⚡</red>"
+  warning-title: "<red>ClearLagg</red>"
   warning-subtitle: "<yellow>Clearing items in <gold>{seconds}s</gold></yellow>"
   cleared: "&#4ECDC4✓ &a[ClearLagg] Removed &e{count} &aunclaimed items and entities across all worlds."
   cancelled: "&#FF6B6B[ClearLagg] &cScheduled clear was cancelled."
@@ -66,8 +70,17 @@ commands:
   snapshot-cleared: "&#4ECDC4✓ &aAll forensic snapshots cleared."
   snapshot-not-found: "&#FF6B6B✗ &cSnapshot not found: &e{id}"
   no-permission: "&#FF6B6B✗ &cYou don't have permission to use this command!"
+  redstone-on: "&#4ECDC4✓ &aRedstone protection enabled &7(action: &e{action}&7)."
+  redstone-off: "&#FFD93D[!] &eRedstone protection disabled. Redstone contraptions will run without throttling or removal."
+  redstone-notify: "&#4ECDC4✓ &aRedstone protection set to notification-only mode. Farms will run untouched and admins will be alerted."
+  redstone-status: "&#4ECDC4[ARL] &7Redstone protection: {status} &8| &7Action: &e{action} &8| &7Alerts: {alerts}"
+  alerts-on: "&#4ECDC4✓ &aAdmin lag and redstone alerts enabled."
+  alerts-off: "&#FFD93D[!] &eAdmin lag and redstone alerts disabled."
+  alerts-status: "&#4ECDC4[ARL] &7Alerts: {status} &8| &7TPS lag alerts: {tps_lag} &8| &7Only when lagging: {only_lag}"
   help: |-
     &#FFD93D┌─ &6AntiRedstoneLag &7v{version} ──────────┐
+    &6/arl redstone  &7- Toggle protection (on/off/notify/status)
+    &6/arl alerts    &7- Toggle admin lag alerts (on/off/status)
     &6/arl reload    &7- Reload configuration and messages
     &6/arl stats     &7- View plugin statistics
     &6/arl logs      &7- View or download logs

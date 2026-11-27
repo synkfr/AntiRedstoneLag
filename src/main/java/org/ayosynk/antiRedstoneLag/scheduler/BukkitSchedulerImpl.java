@@ -36,4 +36,9 @@ public class BukkitSchedulerImpl implements Scheduler {
         // In standard Bukkit, we just run it on the main thread
         Bukkit.getScheduler().runTaskLater(plugin, task, delay);
     }
+
+    @Override
+    public void runTask(Player player, Runnable task) {
+        Bukkit.getScheduler().runTask(plugin, task);
+    }
 }
