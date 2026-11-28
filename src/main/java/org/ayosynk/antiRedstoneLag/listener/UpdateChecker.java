@@ -17,8 +17,12 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.function.Consumer;
 
+/**
+ * Checks Modrinth releases asynchronously on startup and notifies staff on join.
+ */
 public class UpdateChecker implements Listener {
     private static final String MODRINTH_API_URL = "https://api.modrinth.com/v2/project/";
     private static final String UPDATE_PERMISSION = "antiredstonelag.admin";
@@ -43,10 +47,11 @@ public class UpdateChecker implements Listener {
             if (isRemoteNewer(version, currentVersion)) {
                 latestVersion = version;
                 updateAvailable = true;
-                String msg = plugin.getMessageManager().getMessagesConfig().getMessages().getUpdateAvailableConsole()
+                var msgs = plugin.getMessageManager().getMessagesConfig().getMessages();
+                String msg = msgs.getUpdateAvailableConsole()
                         .replace("{version}", version)
                         .replace("{current}", currentVersion);
-                String download = plugin.getMessageManager().getMessagesConfig().getMessages().getUpdateDownloadConsole()
+                String download = msgs.getUpdateDownloadConsole()
                         .replace("{url}", projectUrl);
                 plugin.getLogger().info(msg);
                 plugin.getLogger().info(download);
@@ -74,7 +79,6 @@ public class UpdateChecker implements Listener {
             }
         }
 
-        // Release builds take precedence over pre-release tags of the same numeric version.
         boolean rPre = remoteBase.length > 1;
         boolean cPre = currentBase.length > 1;
         return !rPre && cPre;
@@ -152,9 +156,13 @@ public class UpdateChecker implements Listener {
 
         scheduler.runTaskLater(player, () -> {
             if (player.isOnline()) {
-                var messages = plugin.getMessageManager().getMessagesConfig().getMessages();
-                plugin.getMessageManager().sendIfNotBlank(player, messages.getUpdateAvailablePlayer().replace("{version}", latestVersion));
-                plugin.getMessageManager().sendIfNotBlank(player, messages.getUpdateDownloadPlayer().replace("{url}", projectUrl));
+                var mm = plugin.getMessageManager();
+                var messages = mm.getMessagesConfig().getMessages();
+                mm.sendIfNotBlank(player, messages.getUpdateAvailablePlayer(), Map.of(
+                        "version", latestVersion,
+                        "current", plugin.getPluginMeta().getVersion()
+                ));
+                mm.sendIfNotBlank(player, messages.getUpdateDownloadPlayer(), Map.of("url", projectUrl));
             }
         }, 40L);
     }
