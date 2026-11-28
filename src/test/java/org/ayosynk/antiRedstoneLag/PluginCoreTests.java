@@ -6,8 +6,8 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.ayosynk.antiRedstoneLag.config.ConfigManager;
 import org.ayosynk.antiRedstoneLag.config.MessageManager;
 import org.ayosynk.antiRedstoneLag.listener.UpdateChecker;
-import org.ayosynk.antiRedstoneLag.manager.CounterManager;
 import org.ayosynk.antiRedstoneLag.manager.EntityFilterRule;
+import org.ayosynk.antiRedstoneLag.util.BlockKeyCodec;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.ChestBoat;
 import org.bukkit.entity.Cow;
@@ -112,25 +112,25 @@ class PluginCoreTests {
                 {-29_999_999, -1, 12345}
         };
         for (int[] c : coords) {
-            long packed = CounterManager.packBlock(c[0], c[1], c[2]);
-            assertEquals(c[0], CounterManager.unpackBlockX(packed));
-            assertEquals(c[1], CounterManager.unpackBlockY(packed));
-            assertEquals(c[2], CounterManager.unpackBlockZ(packed));
+            long packed = BlockKeyCodec.packBlock(c[0], c[1], c[2]);
+            assertEquals(c[0], BlockKeyCodec.unpackBlockX(packed));
+            assertEquals(c[1], BlockKeyCodec.unpackBlockY(packed));
+            assertEquals(c[2], BlockKeyCodec.unpackBlockZ(packed));
         }
 
-        long chunkPacked = CounterManager.packChunk(-123456, 654321);
-        assertEquals(-123456, (int) (chunkPacked >> 32));
-        assertEquals(654321, (int) chunkPacked);
+        long chunkPacked = BlockKeyCodec.packChunk(-123456, 654321);
+        assertEquals(-123456, BlockKeyCodec.unpackChunkX(chunkPacked));
+        assertEquals(654321, BlockKeyCodec.unpackChunkZ(chunkPacked));
     }
 
     @Test
     void versionComparisonHandlesUpgradesAndPreReleases() {
-        assertTrue(UpdateChecker.isRemoteNewer("26.4", "26.3"));
-        assertTrue(UpdateChecker.isRemoteNewer("26.3.1", "26.3"));
-        assertTrue(UpdateChecker.isRemoteNewer("26.4", "26.4-SNAPSHOT"));
-        assertFalse(UpdateChecker.isRemoteNewer("26.3", "26.4"));
-        assertFalse(UpdateChecker.isRemoteNewer("v26.4", "26.4"));
-        assertFalse(UpdateChecker.isRemoteNewer("26.4-SNAPSHOT", "26.4"));
+        assertTrue(UpdateChecker.isRemoteNewer("2.0.0", "1.9.9"));
+        assertTrue(UpdateChecker.isRemoteNewer("2.0.1", "2.0.0"));
+        assertTrue(UpdateChecker.isRemoteNewer("2.0.0", "2.0.0-SNAPSHOT"));
+        assertFalse(UpdateChecker.isRemoteNewer("1.9.9", "2.0.0"));
+        assertFalse(UpdateChecker.isRemoteNewer("v2.0.0", "2.0.0"));
+        assertFalse(UpdateChecker.isRemoteNewer("2.0.0-SNAPSHOT", "2.0.0"));
     }
 
     @Test
@@ -138,15 +138,9 @@ class PluginCoreTests {
         assertEquals(Component.empty(), MessageManager.parseComponent(""));
         assertEquals(Component.empty(), MessageManager.parseComponent("   "));
 
-        Component comp = MessageManager.parseComponent("&#FF6B6B[ARL] &AEnabled <bold>Now</bold>");
+        Component comp = MessageManager.parseComponent("&#00E262[AntiRedstoneLag] &AEnabled <bold>Now</bold>");
         String plain = PlainTextComponentSerializer.plainText().serialize(comp);
-        assertEquals("[ARL] Enabled Now", plain);
-
-        String statusMsg = "&#4ECDC4[ARL] &7Redstone protection: {status} &8| &7Alerts: {alerts}"
-                .replace("{status}", "&eNOTIFY ONLY")
-                .replace("{alerts}", "&aON");
-        String statusPlain = PlainTextComponentSerializer.plainText().serialize(MessageManager.parseComponent(statusMsg));
-        assertEquals("[ARL] Redstone protection: NOTIFY ONLY | Alerts: ON", statusPlain);
+        assertEquals("[AntiRedstoneLag] Enabled Now", plain);
     }
 
     @Test
@@ -154,7 +148,7 @@ class PluginCoreTests {
         Map<String, LongOpenHashSet> parsed = ConfigManager.parseWhitelistedChunks(
                 List.of("world:10:-5", "bad_entry", "world:x:2"), null);
         assertTrue(parsed.containsKey("world"));
-        assertTrue(parsed.get("world").contains(CounterManager.packChunk(10, -5)));
+        assertTrue(parsed.get("world").contains(BlockKeyCodec.packChunk(10, -5)));
         assertEquals(1, parsed.get("world").size());
     }
 }

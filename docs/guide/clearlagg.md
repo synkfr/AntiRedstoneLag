@@ -11,10 +11,24 @@ clearlagg:
   countdown-seconds: [60, 30, 10, 5, 4, 3, 2, 1]
   broadcast-mode: CHAT
   clear-ground-items: true
+  min-item-age-seconds: 30
+  merge-items: false
+  chunk-entity-caps:
+    enabled: false
+    max-mobs-per-chunk: 40
+    max-items-per-chunk: 100
   tps-emergency-threshold: 0.0
 ```
 
 `broadcast-mode` supports `CHAT`, `ACTION_BAR`, `TITLE`, `SUBTITLE`, `ALL`, and `NONE`.
+
+## v2 Improvements
+
+- **Item Age Protection (`min-item-age-seconds`)**: Ground items dropped more recently than this age (default 30s) are protected during scheduled auto-clears.
+- **SMP Vehicle Immunity**: `Hopper_Minecart`, `Chest_Minecart`, `Furnace_Minecart`, and boats are excluded from default removal and whitelisted so farm collectors and docks remain untouched.
+- **Chunk Entity Density Caps (`chunk-entity-caps`)**: Optional per-chunk limits for unwhitelisted mobs and dropped items.
+- **Per-World Toggle**: Set `worlds.<worldName>.clearlagg-enabled: false` to exclude specific worlds from automatic or manual ClearLagg sweeps.
+- **Timer Controls**: Use `/arl clear pause`, `/arl clear resume`, `/arl clear cancel`, or the Staff GUI ClearLagg panel (`/arl gui`).
 
 ## Rule syntax
 
@@ -36,11 +50,3 @@ Conditions:
 - `liveTime>N`, `liveTime=N`, and `liveTime<N` (in ticks)
 
 Unrecognized target names are ignored and logged at startup instead of matching entities. Players are never cleared by any rule.
-
-## Default protections
-
-The default `entity-whitelist` protects:
-- Players, Villagers, Iron Golems, Allays, Armor Stands, Item Frames, Glow Item Frames, Paintings, Leash Knots, Interactions, and Display entities
-- Any entity matching `hasName`, `isTamed`, `isLeashed`, or `isMounted`
-
-`item-blacklist` protects dropped Nether Stars, Beacons, Totems of Undying, Elytras, Diamonds, Diamond Blocks, Netherite gear, and Netherite blocks/ingots.

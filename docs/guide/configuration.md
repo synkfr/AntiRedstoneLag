@@ -5,63 +5,78 @@ Configuration lives in `plugins/AntiRedstoneLag/config.yml` and can be reloaded 
 ## Core thresholds and actions
 
 ```yaml
-chunk-threshold: 500
-block-threshold: 15
+config-version: 2
+chunk-threshold: 800
+block-threshold: 30
 reset-interval-ticks: 20
 redstone-enabled: true
 removal-action: FREEZE
 ```
 
+By default, thresholds require activity across two consecutive intervals (unless an extreme 2x chunk or 3x block burst occurs) so brief vanilla crop, melon, sugarcane, and sorter waves never false-flag.
+
 `removal-action` accepts five modes:
 
 | Mode | Effect when threshold trips |
 | :--- | :--- |
-| `FREEZE` | Cancels the signal for `freeze.duration-seconds`, then falls back to signal throttling or chunk lockdown without breaking blocks |
+| `FREEZE` | Cancels the signal for `freeze.duration-seconds`, notifies on resume (`freeze.notify-on-resume`), and escalates to lockdown after `max-freeze-attempts` |
 | `NOTIFY` | Never cancels, freezes, locks down, or breaks redstone; sends staff coordinates, counts, and culprit name |
 | `DISABLE` | Cancels the block's redstone current until the next `reset-interval-ticks` cycle |
 | `DROP` | Breaks the offending block naturally and drops it as an item |
 | `REMOVE` | Replaces the offending block with air |
 
-## TPS lag alerts and blank messages
+## Persistent storage (`storage`)
 
 ```yaml
-alerts:
-  enabled: true
-  log-to-console: true
-  notify-on-tps-lag: true
-  only-when-lagging: false
+storage:
+  backend: AUTO
+  sqlite-file: "data/antiredstonelag.db"
+  persist-owners: true
+  persist-snapshots: true
+  owner-retention-days: 30
 ```
 
-- `notify-on-tps-lag`: On Paper and Purpur, when TPS drops below `adaptive.min-tps` or MSPT rises above `adaptive.target-mspt`, AntiRedstoneLag checks the busiest redstone chunk from the last interval and alerts staff with the culprit's name if redstone activity is high.
-- `only-when-lagging`: Suppresses threshold, freeze, and lockdown notifications whenever server TPS and MSPT are healthy.
-- Setting any string in `messages.yml` to `""` suppresses that line completely without sending an empty chat message.
+- `AUTO` uses SQLite WAL mode when `sqlite-jdbc` is available and falls back cleanly to atomic JSON files in `plugins/AntiRedstoneLag/data/`.
+- Block ownership survives chunk unloads and server restarts, and v1 `stats.yml` is migrated automatically.
 
-Note: Folia regions tick independently and do not expose global server TPS or MSPT, so `notify-on-tps-lag` and `only-when-lagging` apply on Paper and Purpur while threshold `NOTIFY` alerts work on both Paper and Folia.
-
-## Adaptive scaling, fingerprinting, and proximity
+## Specialized detectors & multi-pattern fingerprinting
 
 ```yaml
-freeze:
-  enabled: true
-  duration-seconds: 15
-  max-freeze-attempts: 3
-
-adaptive:
-  enabled: true
-  target-mspt: 40.0
-  min-tps: 18.0
-  healthy-headroom-multiplier: 1.5
-
 fingerprint:
   enabled: true
-  clock-strictness: 0.7
+  clock-strictness: 0.85
+  history-size: 8
+  max-interval-ms: 500
+  variance-tolerance-ms: 45
 
-proximity:
-  enabled: true
-  player-radius: 96
-  unattended-strict-multiplier: 0.6
+detectors:
+  piston-loop-threshold: 16
+  hopper-limiter:
+    enabled: false
+    max-transfers-per-interval: 64
+  crafter-limiter:
+    enabled: true
+    max-crafts-per-interval: 40
+  minecart-cluster:
+    enabled: true
+    max-minecarts-per-block: 16
+    action: REMOVE_EXCESS
 ```
 
-- When `mspt <= 35.0` and `tps >= 19.5`, thresholds multiply by `healthy-headroom-multiplier`. When `tps < min-tps` or `mspt >= 50.0`, thresholds halve (`0.5x`).
-- When no player is within `player-radius` blocks, thresholds scale by `unattended-strict-multiplier`.
-- Whitelist mode (`whitelist.enabled: true`) restricts monitoring exclusively to listed `world:chunkX:chunkZ` entries.
+## Per-world overrides (`worlds`)
+
+Override `chunk-threshold`, `block-threshold`, `removal-action`, or `clearlagg-enabled` for specific worlds:
+
+```yaml
+worlds:
+  world_nether:
+    chunk-threshold: 350
+    block-threshold: 12
+    removal-action: FREEZE
+    clearlagg-enabled: true
+```
+
+## Integrations (`integrations`)
+
+- **PlaceholderAPI**: Registers `%arl_status%`, `%arl_mode%`, `%arl_alerts%`, `%arl_tps%`, `%arl_mspt%`, `%arl_chunks_monitored%`, `%arl_blocks_monitored%`, `%arl_frozen_count%`, `%arl_locked_count%`, `%arl_removals_total%`, `%arl_removals_today%`, `%arl_freezes_total%`, `%arl_lockdowns_total%`, `%arl_entities_cleared%`, and `%arl_clear_countdown%`.
+- **Discord Webhooks**: Sends async embeds for `LOCKDOWN`, `TPS_LAG`, `REMOVAL`, and `SNAPSHOT` events with configurable cooldowns.
