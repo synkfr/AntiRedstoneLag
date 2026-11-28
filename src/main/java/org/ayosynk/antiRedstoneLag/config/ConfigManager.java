@@ -46,6 +46,11 @@ public class ConfigManager {
             it.load(true);
         });
 
+        if (!"26.5".equals(pluginConfig.getConfigVersion())) {
+            pluginConfig.setConfigVersion("26.5");
+            pluginConfig.save();
+        }
+
         this.redstoneMaterials = new HashSet<>(pluginConfig.getRedstoneComponents());
         this.enabledWorlds = new HashSet<>(pluginConfig.getEnabledWorlds());
         if (this.enabledWorlds.isEmpty()) {

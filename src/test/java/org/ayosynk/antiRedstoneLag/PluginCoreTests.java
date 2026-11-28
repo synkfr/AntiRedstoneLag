@@ -141,6 +141,12 @@ class PluginCoreTests {
         Component comp = MessageManager.parseComponent("&#FF6B6B[ARL] &AEnabled <bold>Now</bold>");
         String plain = PlainTextComponentSerializer.plainText().serialize(comp);
         assertEquals("[ARL] Enabled Now", plain);
+
+        String statusMsg = "&#4ECDC4[ARL] &7Redstone protection: {status} &8| &7Alerts: {alerts}"
+                .replace("{status}", "&eNOTIFY ONLY")
+                .replace("{alerts}", "&aON");
+        String statusPlain = PlainTextComponentSerializer.plainText().serialize(MessageManager.parseComponent(statusMsg));
+        assertEquals("[ARL] Redstone protection: NOTIFY ONLY | Alerts: ON", statusPlain);
     }
 
     @Test

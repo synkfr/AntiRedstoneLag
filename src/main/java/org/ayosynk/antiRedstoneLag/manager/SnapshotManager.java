@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class SnapshotManager {
     private static final long SNAPSHOT_COOLDOWN_MS = 60000L;
@@ -98,7 +99,7 @@ public class SnapshotManager {
     private final Map<String, Snapshot> snapshots = Collections.synchronizedMap(new LinkedHashMap<>());
     // world -> (block -> last snapshot time), old entries get pruned so this doesn't grow forever
     private final Map<UUID, Map<Long, Long>> snapshotCooldowns = new ConcurrentHashMap<>();
-    private volatile long lastCooldownPrune = System.currentTimeMillis();
+    private final AtomicLong lastCooldownPrune = new AtomicLong(System.currentTimeMillis());
     private final AtomicInteger snapshotCounter = new AtomicInteger(1);
     private final File snapshotDir;
 
@@ -162,7 +163,13 @@ public class SnapshotManager {
             for (int dz = -radius; dz <= radius; dz++) {
                 int x = centerX + dx;
                 int z = centerZ + dz;
-                if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
+                int cx = x >> 4;
+                int cz = z >> 4;
+                if (!world.isChunkLoaded(cx, cz)) continue;
+                try {
+                    if (!Bukkit.isOwnedByCurrentRegion(world, cx, cz)) continue;
+                } catch (Throwable ignored) {
+                }
                 for (int y = minY; y <= maxY; y++) {
                     Block block = world.getBlockAt(x, y, z);
                     Material mat = block.getType();
@@ -314,12 +321,11 @@ public class SnapshotManager {
 
     // drop cooldowns that already ran out, runs at most once per cooldown window
     private void pruneCooldowns(long now) {
-        if (now - lastCooldownPrune < SNAPSHOT_COOLDOWN_MS) return;
-        lastCooldownPrune = now;
-        snapshotCooldowns.values().removeIf(worldCooldowns -> {
+        long prev = lastCooldownPrune.get();
+        if (now - prev < SNAPSHOT_COOLDOWN_MS || !lastCooldownPrune.compareAndSet(prev, now)) return;
+        for (Map<Long, Long> worldCooldowns : snapshotCooldowns.values()) {
             worldCooldowns.values().removeIf(time -> now - time >= SNAPSHOT_COOLDOWN_MS);
-            return worldCooldowns.isEmpty();
-        });
+        }
     }
 
     public void clearSnapshots() {

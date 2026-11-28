@@ -100,6 +100,7 @@ public class CounterManager {
     private final Object freezeLock = new Object();
 
     private final Map<UUID, Long2IntOpenHashMap> chunkCounters = new ConcurrentHashMap<>();
+    private final Map<UUID, Long2IntOpenHashMap> lastIntervalChunkCounters = new ConcurrentHashMap<>();
     private final Map<UUID, Long2IntOpenHashMap> blockCounters = new ConcurrentHashMap<>();
     private final Map<UUID, Long> warnedPlayers = new ConcurrentHashMap<>();
     private final Object counterLock = new Object();
@@ -319,10 +320,22 @@ public class CounterManager {
     public List<HotspotGroup> getHotspots(int maxGroups) {
         Map<UUID, Long2IntOpenHashMap> snapshot = new HashMap<>();
         synchronized (counterLock) {
-            for (Map.Entry<UUID, Long2IntOpenHashMap> e : chunkCounters.entrySet()) {
+            for (Map.Entry<UUID, Long2IntOpenHashMap> e : lastIntervalChunkCounters.entrySet()) {
                 Long2IntOpenHashMap src = e.getValue();
                 if (!src.isEmpty()) {
                     snapshot.put(e.getKey(), new Long2IntOpenHashMap(src));
+                }
+            }
+            for (Map.Entry<UUID, Long2IntOpenHashMap> e : chunkCounters.entrySet()) {
+                Long2IntOpenHashMap src = e.getValue();
+                if (src.isEmpty()) continue;
+                Long2IntOpenHashMap dst = snapshot.computeIfAbsent(e.getKey(), k -> new Long2IntOpenHashMap());
+                for (var entry : src.long2IntEntrySet()) {
+                    long k = entry.getLongKey();
+                    int v = entry.getIntValue();
+                    if (v > dst.get(k)) {
+                        dst.put(k, v);
+                    }
                 }
             }
         }
@@ -396,6 +409,16 @@ public class CounterManager {
         synchronized (counterLock) {
             Long2IntOpenHashMap cMap = chunkCounters.get(worldId);
             return cMap != null ? cMap.get(chunkKey) : 0;
+        }
+    }
+
+    public int getDisplayChunkUpdates(UUID worldId, long chunkKey) {
+        synchronized (counterLock) {
+            Long2IntOpenHashMap curr = chunkCounters.get(worldId);
+            Long2IntOpenHashMap prev = lastIntervalChunkCounters.get(worldId);
+            int currVal = curr != null ? curr.get(chunkKey) : 0;
+            int prevVal = prev != null ? prev.get(chunkKey) : 0;
+            return Math.max(currVal, prevVal);
         }
     }
 
@@ -507,6 +530,12 @@ public class CounterManager {
         checkLagAndNotify();
 
         synchronized (counterLock) {
+            lastIntervalChunkCounters.clear();
+            for (Map.Entry<UUID, Long2IntOpenHashMap> e : chunkCounters.entrySet()) {
+                if (!e.getValue().isEmpty()) {
+                    lastIntervalChunkCounters.put(e.getKey(), new Long2IntOpenHashMap(e.getValue()));
+                }
+            }
             chunkCounters.values().forEach(Long2IntOpenHashMap::clear);
             blockCounters.values().forEach(Long2IntOpenHashMap::clear);
         }

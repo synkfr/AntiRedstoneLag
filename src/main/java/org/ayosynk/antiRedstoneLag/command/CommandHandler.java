@@ -120,7 +120,7 @@ public class CommandHandler implements BasicCommand {
                     if (!player.isOnline() || !activeInspectors.containsKey(uuid)) return;
                     Location pLoc = player.getLocation();
                     long chunkKey = CounterManager.packChunk(pLoc.getBlockX() >> 4, pLoc.getBlockZ() >> 4);
-                    int chunkUps = counterManager.getChunkUpdates(pLoc.getWorld().getUID(), chunkKey);
+                    int chunkUps = counterManager.getDisplayChunkUpdates(pLoc.getWorld().getUID(), chunkKey);
 
                     BossBar.Color barColor;
                     float progress;
@@ -247,11 +247,13 @@ public class CommandHandler implements BasicCommand {
                     : (configManager.getRemovalAction() == PluginConfig.RemovalAction.NOTIFY ? "&eNOTIFY ONLY" : "&aON");
             String alerts = configManager.isAlertsEnabled() ? "&aON" : "&cOFF";
             String raw = messageManager.getMessagesConfig().getCommands().getRedstoneStatus();
-            Component msg = messageManager.parseMessage(raw)
-                    .replaceText(t -> t.matchLiteral("{status}").replacement(status))
-                    .replaceText(t -> t.matchLiteral("{action}").replacement(configManager.getRemovalAction().name()))
-                    .replaceText(t -> t.matchLiteral("{alerts}").replacement(alerts));
-            messageManager.sendIfNotBlank(sender, raw, msg);
+            if (raw != null && !raw.isBlank()) {
+                String formatted = raw
+                        .replace("{status}", status)
+                        .replace("{action}", configManager.getRemovalAction().name())
+                        .replace("{alerts}", alerts);
+                messageManager.sendIfNotBlank(sender, raw, messageManager.parseMessage(formatted));
+            }
             return;
         }
 
@@ -300,11 +302,13 @@ public class CommandHandler implements BasicCommand {
     private void alertsCommand(CommandSender sender, String[] args) {
         if (args.length < 2 || args[1].equalsIgnoreCase("status")) {
             String raw = messageManager.getMessagesConfig().getCommands().getAlertsStatus();
-            Component msg = messageManager.parseMessage(raw)
-                    .replaceText(t -> t.matchLiteral("{status}").replacement(configManager.isAlertsEnabled() ? "&aON" : "&cOFF"))
-                    .replaceText(t -> t.matchLiteral("{tps_lag}").replacement(configManager.isNotifyOnTpsLag() ? "&aON" : "&cOFF"))
-                    .replaceText(t -> t.matchLiteral("{only_lag}").replacement(configManager.isOnlyWhenLagging() ? "&eON" : "&7OFF"));
-            messageManager.sendIfNotBlank(sender, raw, msg);
+            if (raw != null && !raw.isBlank()) {
+                String formatted = raw
+                        .replace("{status}", configManager.isAlertsEnabled() ? "&aON" : "&cOFF")
+                        .replace("{tps_lag}", configManager.isNotifyOnTpsLag() ? "&aON" : "&cOFF")
+                        .replace("{only_lag}", configManager.isOnlyWhenLagging() ? "&eON" : "&7OFF");
+                messageManager.sendIfNotBlank(sender, raw, messageManager.parseMessage(formatted));
+            }
             return;
         }
 

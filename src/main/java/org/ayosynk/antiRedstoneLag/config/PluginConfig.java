@@ -533,6 +533,10 @@ public class PluginConfig extends OkaeriConfig {
         return configVersion;
     }
 
+    public void setConfigVersion(String configVersion) {
+        this.configVersion = configVersion;
+    }
+
     public int getChunkThreshold() {
         return Math.max(1, chunkThreshold);
     }

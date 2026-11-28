@@ -141,45 +141,46 @@ public class ClearLaggManager {
         PluginConfig.BroadcastMode mode = cfg.getBroadcastMode();
         if (mode == PluginConfig.BroadcastMode.NONE) return;
 
-        Component chatMsg = messageManager.parseMessage(
-                messageManager.getMessagesConfig().getClearlagg().getWarningChat())
-                .replaceText(t -> t.matchLiteral("{seconds}").replacement(String.valueOf(seconds)));
+        var clMsgs = messageManager.getMessagesConfig().getClearlagg();
+        String rawChat = clMsgs.getWarningChat();
+        String rawAction = clMsgs.getWarningActionbar();
+        String rawTitle = clMsgs.getWarningTitle();
+        String rawSub = clMsgs.getWarningSubtitle();
 
-        Component actionbarMsg = messageManager.parseMessage(
-                messageManager.getMessagesConfig().getClearlagg().getWarningActionbar())
-                .replaceText(t -> t.matchLiteral("{seconds}").replacement(String.valueOf(seconds)));
+        Component chatMsg = (rawChat != null && !rawChat.isBlank())
+                ? messageManager.parseMessage(rawChat).replaceText(t -> t.matchLiteral("{seconds}").replacement(String.valueOf(seconds)))
+                : null;
+        Component actionbarMsg = (rawAction != null && !rawAction.isBlank())
+                ? messageManager.parseMessage(rawAction).replaceText(t -> t.matchLiteral("{seconds}").replacement(String.valueOf(seconds)))
+                : null;
+        Component titleMsg = (rawTitle != null && !rawTitle.isBlank())
+                ? messageManager.parseMessage(rawTitle).replaceText(t -> t.matchLiteral("{seconds}").replacement(String.valueOf(seconds)))
+                : Component.empty();
+        Component subtitleMsg = (rawSub != null && !rawSub.isBlank())
+                ? messageManager.parseMessage(rawSub).replaceText(t -> t.matchLiteral("{seconds}").replacement(String.valueOf(seconds)))
+                : Component.empty();
+        boolean hasTitle = (rawTitle != null && !rawTitle.isBlank()) || (rawSub != null && !rawSub.isBlank());
 
-        Component titleMsg = messageManager.parseMessage(
-                messageManager.getMessagesConfig().getClearlagg().getWarningTitle())
-                .replaceText(t -> t.matchLiteral("{seconds}").replacement(String.valueOf(seconds)));
-
-        Component subtitleMsg = messageManager.parseMessage(
-                messageManager.getMessagesConfig().getClearlagg().getWarningSubtitle())
-                .replaceText(t -> t.matchLiteral("{seconds}").replacement(String.valueOf(seconds)));
-
-        Title title = Title.title(titleMsg, subtitleMsg,
-                Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1200), Duration.ofMillis(400)));
+        Title.Times times = Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1200), Duration.ofMillis(400));
 
         for (Player player : Bukkit.getOnlinePlayers()) {
             switch (mode) {
                 case CHAT:
-                    player.sendMessage(chatMsg);
+                    if (chatMsg != null) player.sendMessage(chatMsg);
                     break;
                 case ACTION_BAR:
-                    player.sendActionBar(actionbarMsg);
+                    if (actionbarMsg != null) player.sendActionBar(actionbarMsg);
                     break;
                 case TITLE:
-                    player.showTitle(Title.title(titleMsg, Component.empty(),
-                            Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1200), Duration.ofMillis(400))));
+                    if (rawTitle != null && !rawTitle.isBlank()) player.showTitle(Title.title(titleMsg, Component.empty(), times));
                     break;
                 case SUBTITLE:
-                    player.showTitle(Title.title(Component.empty(), subtitleMsg,
-                            Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1200), Duration.ofMillis(400))));
+                    if (rawSub != null && !rawSub.isBlank()) player.showTitle(Title.title(Component.empty(), subtitleMsg, times));
                     break;
                 case ALL:
-                    player.sendMessage(chatMsg);
-                    player.sendActionBar(actionbarMsg);
-                    player.showTitle(title);
+                    if (chatMsg != null) player.sendMessage(chatMsg);
+                    if (actionbarMsg != null) player.sendActionBar(actionbarMsg);
+                    if (hasTitle) player.showTitle(Title.title(titleMsg, subtitleMsg, times));
                     break;
             }
         }
@@ -303,8 +304,9 @@ public class ClearLaggManager {
     public void cancelScheduledClear() {
         int interval = configManager.getPluginConfig().getClearlagg().getIntervalSeconds();
         secondsUntilClear.set(interval > 0 ? interval : 300);
-        Component cancelMsg = messageManager.parseMessage(
-                messageManager.getMessagesConfig().getClearlagg().getCancelled());
+        String raw = messageManager.getMessagesConfig().getClearlagg().getCancelled();
+        if (raw == null || raw.isBlank()) return;
+        Component cancelMsg = messageManager.parseMessage(raw);
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.sendMessage(cancelMsg);
         }
