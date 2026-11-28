@@ -1,38 +1,26 @@
 package org.ayosynk.antiRedstoneLag.scheduler;
 
+import org.bukkit.Location;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 /**
- * Interface for scheduling tasks across different platforms (Bukkit/Folia).
+ * Platform-neutral scheduler supporting Paper, Purpur, and Folia regional execution.
  */
 public interface Scheduler {
-    /**
-     * Run a task on the global region or main thread after a delay, then repeatedly.
-     */
-    void runTaskTimer(Runnable task, long delay, long period);
+    TaskHandle runTaskTimer(Runnable task, long delayTicks, long periodTicks);
 
-    /**
-     * Run a task asynchronously.
-     */
     void runTaskAsynchronously(Runnable task);
 
-    /**
-     * Run a task asynchronously after a delay, then repeatedly.
-     */
-    void runTaskTimerAsynchronously(Runnable task, long delay, long period);
+    TaskHandle runTaskTimerAsynchronously(Runnable task, long delayTicks, long periodTicks);
 
-    /**
-     * Run a task later on the global region or main thread.
-     */
-    void runTaskLater(Runnable task, long delay);
+    TaskHandle runTaskLater(Runnable task, long delayTicks);
 
-    /**
-     * Run a task later on the region thread of a specific player.
-     */
-    void runTaskLater(Player player, Runnable task, long delay);
+    TaskHandle runTaskLater(Player player, Runnable task, long delayTicks);
 
-    /**
-     * Run a task immediately on the region thread of a specific player.
-     */
     void runTask(Player player, Runnable task);
+
+    void runAtLocation(Location location, Runnable task);
+
+    boolean runForEntity(Entity entity, Runnable task, Runnable retired);
 }

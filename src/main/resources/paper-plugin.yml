@@ -1,12 +1,19 @@
 name: AntiRedstoneLag
 version: '${project.version}'
 main: org.ayosynk.antiRedstoneLag.AntiRedstoneLag
+loader: org.ayosynk.antiRedstoneLag.bootstrap.PluginLibraryLoader
 api-version: '1.21'
 description: Redstone lag prevention, diagnostics, and entity cleanup for Paper and Folia
 authors:
   - AyoSynk
 website: https://modrinth.com/plugin/antiredstonelag
 folia-supported: true
+dependencies:
+  server:
+    PlaceholderAPI:
+      load: BEFORE
+      required: false
+      join-classpath: true
 permissions:
   antiredstonelag.*:
     description: All AntiRedstoneLag permissions
@@ -23,6 +30,8 @@ permissions:
       antiredstonelag.inspect: true
       antiredstonelag.snapshot: true
       antiredstonelag.clear: true
+      antiredstonelag.gui: true
+      antiredstonelag.control: true
       antiredstonelag.admin: true
   antiredstonelag.use:
     description: Use basic plugin commands
@@ -49,13 +58,19 @@ permissions:
     description: View and export redstone hotspot map
     default: op
   antiredstonelag.inspect:
-    description: Toggle live redstone inspector particles
+    description: Toggle live redstone inspector particles and BossBar
     default: op
   antiredstonelag.snapshot:
     description: View and manage forensic lag snapshots
     default: op
   antiredstonelag.clear:
     description: Clear ground items and lag entities
+    default: op
+  antiredstonelag.gui:
+    description: Open the interactive AntiRedstoneLag staff panel
+    default: op
+  antiredstonelag.control:
+    description: Manually unfreeze clocks, unlock chunks, and edit chunk whitelist
     default: op
   antiredstonelag.admin:
     description: Receive update notifications
