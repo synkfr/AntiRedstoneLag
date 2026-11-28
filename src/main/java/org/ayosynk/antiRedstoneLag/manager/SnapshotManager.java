@@ -96,7 +96,9 @@ public class SnapshotManager {
     private final ConfigManager configManager;
     private final MessageManager messageManager;
     private final Map<String, Snapshot> snapshots = Collections.synchronizedMap(new LinkedHashMap<>());
-    private final Map<Long, Long> snapshotCooldowns = new ConcurrentHashMap<>();
+    // world -> (block -> last snapshot time), old entries get pruned so this doesn't grow forever
+    private final Map<UUID, Map<Long, Long>> snapshotCooldowns = new ConcurrentHashMap<>();
+    private volatile long lastCooldownPrune = System.currentTimeMillis();
     private final AtomicInteger snapshotCounter = new AtomicInteger(1);
     private final File snapshotDir;
 
@@ -118,13 +120,16 @@ public class SnapshotManager {
         long blockKey = CounterManager.packBlock(centerX, centerY, centerZ);
 
         long now = System.currentTimeMillis();
-        Long lastSnap = snapshotCooldowns.get(blockKey);
+        pruneCooldowns(now);
+
+        World world = centerBlock.getWorld();
+        Map<Long, Long> worldCooldowns = snapshotCooldowns.computeIfAbsent(world.getUID(), k -> new ConcurrentHashMap<>());
+        Long lastSnap = worldCooldowns.get(blockKey);
         if (lastSnap != null && now - lastSnap < SNAPSHOT_COOLDOWN_MS) {
             return null;
         }
-        snapshotCooldowns.put(blockKey, now);
+        worldCooldowns.put(blockKey, now);
 
-        World world = centerBlock.getWorld();
         int radius = configManager.getPluginConfig().getSnapshot().getRadius();
         String snapshotId = "SNP-" + snapshotCounter.getAndIncrement();
 
@@ -305,6 +310,16 @@ public class SnapshotManager {
         synchronized (snapshots) {
             return snapshots.get(id.toUpperCase());
         }
+    }
+
+    // drop cooldowns that already ran out, runs at most once per cooldown window
+    private void pruneCooldowns(long now) {
+        if (now - lastCooldownPrune < SNAPSHOT_COOLDOWN_MS) return;
+        lastCooldownPrune = now;
+        snapshotCooldowns.values().removeIf(worldCooldowns -> {
+            worldCooldowns.values().removeIf(time -> now - time >= SNAPSHOT_COOLDOWN_MS);
+            return worldCooldowns.isEmpty();
+        });
     }
 
     public void clearSnapshots() {
