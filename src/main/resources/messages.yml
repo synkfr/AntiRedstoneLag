@@ -1,101 +1,165 @@
-# AntiRedstoneLag Messages
-# Supports & color codes, MiniMessage tags, and &#RRGGBB hex colors
+# AntiRedstoneLag v2 Messages
+# Clean, minimal MiniMessage hex palette
 
-alerts:
-  chunk-lockdown-admin: "&#FF6B6B[!] &cChunk Lockdown Triggered! &7World: &e{world} &7Chunk: &e{chunkX}, {chunkZ} &7Duration: &e{duration}s"
-  chunk-lockdown-local: "&#FF6B6B[!] &cThe chunk you are standing in has been locked down for &e{duration}s &cdue to extreme redstone lag!"
-  clock-frozen: "&#FFD93D[!] &eClock at &6{x}, {y}, {z} &epause-throttled for &c{duration}s &e(high frequency). Auto-resuming soon."
-  clock-resumed: "&#4ECDC4✓ &aClock at &6{x}, {y}, {z} &ahas resumed operation."
-  redstone-notify: "&#FFD93D[!] &eHigh redstone activity at &6{x}, {y}, {z} &7({world}) &8| &e{material} &8| &7Chunk: &b{chunk_count} &7Block: &b{block_count} &8| &7Culprit: &c{culprit}"
-  tps-lag-culprit: "&#FF6B6B[!] &cLag detected &7(TPS: &e{tps} &7| MSPT: &e{mspt}ms&7) &8- &7Redstone at &6{x}, {y}, {z} &7({world}) &8| &7Chunk: &b{chunk_count} &7Block: &b{block_count} &8| &7Culprit: &c{culprit}"
-  component-paused: "&#FFD93D[!] &eThis redstone component is paused for &6{duration}s &edue to high frequency."
-  chunk-locked-interact: "&#FF6B6B[!] &cRedstone in this chunk is locked for &e{duration}s &cdue to lag."
-  redstone-removed: |-
-    &#FF6B6B┌─ &c[!] Lag Machine Detected &7─┐
-    &7│ &6Coordinates: &e{x}, {y}, {z} &7│
-    &7│ &6World: &e{world} &7│
-    &7│ &6Block: &e{material} &7│
-    &7│ &6Chunk Updates: &e{chunk_count} &7│ &6Block Updates: &e{block_count} &7│
-    &#FF6B6B└─ &7Removed for server performance ─┘
-  redstone-warning: "&#FFD93D[!] &eWarning: &7Redstone activity at &e{x}, {y}, {z} &7is at &c{percent}% &7of threshold!"
-
-clearlagg:
-  warning-chat: "&#FFD93D[ClearLagg] &eGround items & lag entities will be cleared in &c{seconds}s&e!"
-  warning-actionbar: "<gold>ClearLagg <dark_gray>| <yellow>Clearing ground items in <red>{seconds}s</red>!"
-  warning-title: "<red>ClearLagg</red>"
-  warning-subtitle: "<yellow>Clearing items in <gold>{seconds}s</gold></yellow>"
-  cleared: "&#4ECDC4✓ &a[ClearLagg] Removed &e{count} &aunclaimed items and entities across all worlds."
-  cancelled: "&#FF6B6B[ClearLagg] &cScheduled clear was cancelled."
-  count: |-
-    &#4ECDC4┌─ &bClearLagg Entity Count &7─┐
-    &7Ground items: &e{items}
-    &7Projectiles: &e{projectiles}
-    &7Monsters: &e{monsters}
-    &7XP Orbs: &e{xp_orbs}
-    &7Vehicles: &e{vehicles}
-    &#4ECDC4└────────────────────────┘
-
-commands:
-  reload-success: "&#4ECDC4✓ &aConfiguration and messages reloaded successfully!"
-  stats: |-
-    &#4ECDC4┌─ &bAntiRedstoneLag Statistics &7─┐
-    &7Chunks monitored: &e{chunks}
-    &7Blocks monitored: &e{blocks}
-    &7Total removals: &e{total_removals}
-    &7Removals today: &e{today_removals}
-    &7Performance: &a{performance}%
-    &#4ECDC4└────────────────────────┘
-  logs-info: |-
-    &#4ECDC4Logging System Information:
-    &7Status: {status}
-    &7Log folder: &e{folder}
-    &7Use &6/arl logs download &7to get latest log file
-  logs-download: "&#4ECDC4✓ &aLog file has been prepared for download!"
-  logs-no-folder: "&#FF6B6B✗ &cLogs folder not found!"
-  logs-empty: "&#FF6B6B✗ &cNo log files found!"
-  logs-file-info: |-
-    &#4ECDC4┌─ &bLatest Log File &7─┐
-    &7File: &e{filename}
-    &7Size: &e{size}
-    &7Modified: &e{modified}
-    &7Path: &e{path}
-    &#4ECDC4└────────────────────┘
-  hotspots-header: "&#4ECDC4┌─ &bRedstone Hotspots &7({count} clusters) ───┐"
-  hotspots-none: "&#4ECDC4✓ &aNo active redstone hotspots detected!"
-  hotspots-exported: "&#4ECDC4✓ &aHotspot map exported to: &e{path}"
-  inspect-enabled: "&#4ECDC4✓ &aReal-time BossBar redstone inspector enabled for &e{duration}s&a!"
-  inspect-disabled: "&#FF6B6B✗ &cReal-time redstone inspector disabled."
-  snapshot-captured: "&#FF6B6B[ARL Snapshot] &cCaptured forensic snapshot &e{id}&c for &6{material}&c at &e{x}, {y}, {z}&c! &7(Culprit: &e{culprit}&7)"
-  snapshot-empty: "&#4ECDC4✓ &aNo forensic snapshots recorded yet."
-  snapshot-cleared: "&#4ECDC4✓ &aAll forensic snapshots cleared."
-  snapshot-not-found: "&#FF6B6B✗ &cSnapshot not found: &e{id}"
-  no-permission: "&#FF6B6B✗ &cYou don't have permission to use this command!"
-  redstone-on: "&#4ECDC4✓ &aRedstone protection enabled &7(action: &e{action}&7)."
-  redstone-off: "&#FFD93D[!] &eRedstone protection disabled. Redstone contraptions will run without throttling or removal."
-  redstone-notify: "&#4ECDC4✓ &aRedstone protection set to notification-only mode. Farms will run untouched and admins will be alerted."
-  redstone-status: "&#4ECDC4[ARL] &7Redstone protection: {status} &8| &7Action: &e{action} &8| &7Alerts: {alerts}"
-  alerts-on: "&#4ECDC4✓ &aAdmin lag and redstone alerts enabled."
-  alerts-off: "&#FFD93D[!] &eAdmin lag and redstone alerts disabled."
-  alerts-status: "&#4ECDC4[ARL] &7Alerts: {status} &8| &7TPS lag alerts: {tps_lag} &8| &7Only when lagging: {only_lag}"
-  help: |-
-    &#FFD93D┌─ &6AntiRedstoneLag &7v{version} ──────────┐
-    &6/arl redstone  &7- Toggle protection (on/off/notify/status)
-    &6/arl alerts    &7- Toggle admin lag alerts (on/off/status)
-    &6/arl reload    &7- Reload configuration and messages
-    &6/arl stats     &7- View plugin statistics
-    &6/arl logs      &7- View or download logs
-    &6/arl hotspots  &7- View top redstone hotspots
-    &6/arl inspect   &7- Toggle real-time BossBar inspector
-    &6/arl snapshot  &7- View forensic lag snapshots
-    &6/arl clear     &7- Clear ground items and lag entities
-    &6/arl help      &7- Show this help message
-    &#FFD93D└──────────────────────────────────────┘
+messages-version: 2
 
 messages:
-  prefix: "&#4ECDC4[ARL]&r "
-  enabled: "&#4ECDC4✓ &aAntiRedstoneLag v{version} has been enabled!"
-  disabled: "&#FF6B6B✗ &cAntiRedstoneLag has been disabled!"
+  prefix: "<color:#A0A0A0>[<color:#00E262>AntiRedstoneLag<color:#A0A0A0>] "
+  enabled: "{prefix}<color:#00E262>Enabled v<color:#FFFFFF>{version}<color:#00E262>."
+  disabled: "{prefix}<color:#E20000>Plugin disabled."
+  player-only: "{prefix}<color:#E20000>You must be a player in-game to run this action."
   update-available-console: "A new version is available: v{version} (current: v{current})"
   update-download-console: "Download at: {url}"
-  update-available-player: "<gold>[AntiRedstoneLag] <yellow>A new version is available: <green>v{version}"
-  update-download-player: "<gold>[AntiRedstoneLag] <gray>Download at: <aqua><click:open_url:'{url}'>{url}</click>"
+  update-available-player: "{prefix}<color:#E2B700>Update available: <color:#00E262>v{version} <color:#A0A0A0>(current: <color:#FFFFFF>v{current}<color:#A0A0A0>)"
+  update-download-player: "{prefix}<color:#A0A0A0>Download: <color:#00E262><underlined><click:open_url:'{url}'>{url}</click></underlined>"
+
+alerts:
+  chunk-lockdown-admin: "{prefix}<bold><color:#E20000>CHUNK LOCKDOWN</bold> <color:#A0A0A0>World: <color:#FFFFFF>{world} <color:#A0A0A0>Chunk: <color:#FFFFFF>{chunkX}, {chunkZ} <color:#A0A0A0>Duration: <color:#E2B700>{duration}s"
+  chunk-lockdown-local: "{prefix}<color:#E20000>Redstone in this chunk is locked for <color:#E2B700>{duration}s <color:#E20000>due to severe lag."
+  clock-frozen: "{prefix}<color:#E2B700>Clock at <color:#FFFFFF>{x}, {y}, {z} <color:#E2B700>paused for <color:#FFFFFF>{duration}s <color:#A0A0A0>(high frequency)."
+  clock-resumed: "{prefix}<color:#00E262>Clock at <color:#FFFFFF>{x}, {y}, {z} <color:#00E262>has resumed operation."
+  redstone-notify: "{prefix}<color:#E2B700>High activity at <color:#FFFFFF>{x}, {y}, {z} <color:#A0A0A0>({world}) | Block: <color:#FFFFFF>{material} <color:#A0A0A0>| Chunk: <color:#FFFFFF>{chunk_count} <color:#A0A0A0>Block: <color:#FFFFFF>{block_count} <color:#A0A0A0>| Culprit: <color:#00E262>{culprit}"
+  tps-lag-culprit: "{prefix}<bold><color:#E20000>CRITICAL TPS LAG</bold> <color:#A0A0A0>TPS: <color:#E20000>{tps} <color:#A0A0A0>MSPT: <color:#E20000>{mspt}ms <color:#A0A0A0>| Location: <color:#FFFFFF>{x}, {y}, {z} ({world}) <color:#A0A0A0>| Culprit: <color:#00E262>{culprit}"
+  component-paused: "{prefix}<color:#E2B700>This component is paused for <color:#FFFFFF>{duration}s <color:#E2B700>due to high frequency."
+  chunk-locked-interact: "{prefix}<color:#E20000>Redstone in this chunk is locked for <color:#E2B700>{duration}s <color:#E20000>due to lag."
+  redstone-removed: |-
+    <color:#E2B700>Lag Machine Mitigated
+    <color:#A0A0A0>Location: <color:#FFFFFF>{x}, {y}, {z} ({world})
+    <color:#A0A0A0>Block: <color:#FFFFFF>{material} <color:#A0A0A0>| Action: <color:#E20000>{action}
+    <color:#A0A0A0>Updates: <color:#FFFFFF>{chunk_count} chunk <color:#A0A0A0>/ <color:#FFFFFF>{block_count} block
+  redstone-warning: "{prefix}<color:#E2B700>Warning: Redstone at <color:#FFFFFF>{x}, {y}, {z} <color:#E2B700>is at <color:#E20000>{percent}% <color:#E2B700>of threshold."
+  minecart-cluster: "{prefix}<color:#E2B700>Cleared <color:#FFFFFF>{count} <color:#E2B700>stacked minecarts at <color:#FFFFFF>{x}, {y}, {z} <color:#A0A0A0>({world})."
+  hopper-throttled: "{prefix}<color:#E2B700>Hopper loop throttled at <color:#FFFFFF>{x}, {y}, {z} <color:#A0A0A0>({world})."
+  crafter-throttled: "{prefix}<color:#E2B700>Crafter loop throttled at <color:#FFFFFF>{x}, {y}, {z} <color:#A0A0A0>({world})."
+
+clearlagg:
+  warning-chat: "{prefix}<color:#E2B700>Ground items and lag entities will be cleared in <color:#FFFFFF>{seconds}s<color:#E2B700>."
+  warning-actionbar: "<color:#E2B700>⚠ Clearing ground items in <color:#FFFFFF>{seconds}s"
+  warning-title: "<color:#E2B700>ClearLagg"
+  warning-subtitle: "<color:#A0A0A0>Clearing items in <color:#FFFFFF>{seconds}s"
+  cleared: "{prefix}<color:#00E262>Cleared <color:#FFFFFF>{count} <color:#00E262>items and lag entities across all worlds."
+  cancelled: "{prefix}<color:#E2B700>Scheduled entity clear has been cancelled."
+  paused: "{prefix}<color:#E2B700>Automatic ClearLagg timer paused."
+  resumed: "{prefix}<color:#00E262>Automatic ClearLagg timer resumed."
+  timer-disabled: "{prefix}<color:#E20000>Automatic ClearLagg timer is currently disabled."
+  timer-status: "{prefix}<color:#A0A0A0>Next scheduled clear in: <color:#FFFFFF>{seconds}s <color:#A0A0A0>({state}<color:#A0A0A0>)"
+  count: |-
+    <color:#E2B700>ClearLagg Entity Count
+    <color:#A0A0A0>Ground items: <color:#FFFFFF>{items}
+    <color:#A0A0A0>Projectiles: <color:#FFFFFF>{projectiles}
+    <color:#A0A0A0>Monsters: <color:#FFFFFF>{monsters}
+    <color:#A0A0A0>XP Orbs: <color:#FFFFFF>{xp_orbs}
+    <color:#A0A0A0>Vehicles: <color:#FFFFFF>{vehicles}
+
+commands:
+  no-permission: "{prefix}<color:#E20000>You do not have permission to execute this command."
+  reload-success: "{prefix}<color:#00E262>Configuration, messages, and detectors reloaded."
+  usage-redstone: "{prefix}<color:#E20000>Invalid usage. Use: <color:#FFFFFF>/arl redstone <on|off|notify|status>"
+  usage-alerts: "{prefix}<color:#E20000>Invalid usage. Use: <color:#FFFFFF>/arl alerts <on|off|status>"
+  usage-unfreeze: "{prefix}<color:#E20000>Invalid usage. Use: <color:#FFFFFF>/arl unfreeze <all|here>"
+  usage-unlock: "{prefix}<color:#E20000>Invalid usage. Use: <color:#FFFFFF>/arl unlock <all|here>"
+  usage-whitelist: "{prefix}<color:#E20000>Invalid usage. Use: <color:#FFFFFF>/arl whitelist <add|remove|list> [world chunkX chunkZ]"
+  redstone-on: "{prefix}<color:#00E262>You have enabled redstone protection <color:#A0A0A0>(action: <color:#FFFFFF>{action}<color:#A0A0A0>)."
+  redstone-off: "{prefix}<color:#E2B700>You have disabled redstone protection. Active freezes and lockdowns were cleared."
+  redstone-notify: "{prefix}<color:#00E262>Redstone protection set to notification-only mode."
+  redstone-status: "{prefix}<color:#A0A0A0>Protection: {status} <color:#A0A0A0>| Action: <color:#FFFFFF>{action} <color:#A0A0A0>| Alerts: {alerts}"
+  alerts-on: "{prefix}<color:#00E262>You have enabled staff redstone and lag alerts."
+  alerts-off: "{prefix}<color:#E2B700>You have muted staff redstone and lag alerts."
+  alerts-status: "{prefix}<color:#A0A0A0>Alerts: {status} <color:#A0A0A0>| TPS Lag: {tps_lag} <color:#A0A0A0>| Only When Lagging: {only_lag}"
+  stats: |-
+    <color:#E2B700>AntiRedstoneLag Statistics
+    <color:#A0A0A0>Chunks monitored: <color:#FFFFFF>{chunks}
+    <color:#A0A0A0>Blocks monitored: <color:#FFFFFF>{blocks}
+    <color:#A0A0A0>Active freezes: <color:#E2B700>{freezes} <color:#A0A0A0>| Active lockdowns: <color:#E20000>{lockdowns}
+    <color:#A0A0A0>Total mitigations: <color:#FFFFFF>{total_removals} <color:#A0A0A0>(Today: <color:#FFFFFF>{today_removals}<color:#A0A0A0>)
+    <color:#A0A0A0>Entities cleared: <color:#FFFFFF>{entities_cleared}
+    <color:#A0A0A0>Performance: <color:#00E262>{performance}%
+  logs-info: |-
+    <color:#E2B700>Logging System
+    <color:#A0A0A0>Status: {status}
+    <color:#A0A0A0>Folder: <color:#FFFFFF>{folder}
+    <color:#A0A0A0>Actions: <color:#00E262><click:run_command:'/arl logs download'>[Latest File]</click> <color:#00E262><click:run_command:'/arl logs tail 15'>[Tail 15]</click>
+  logs-download: "{prefix}<color:#00E262>Latest log details displayed."
+  logs-no-folder: "{prefix}<color:#E20000>Logs folder does not exist."
+  logs-empty: "{prefix}<color:#E20000>No log files found."
+  logs-file-info: |-
+    <color:#E2B700>Latest Log File
+    <color:#A0A0A0>File: <color:#FFFFFF>{filename}
+    <color:#A0A0A0>Size: <color:#FFFFFF>{size}
+    <color:#A0A0A0>Modified: <color:#FFFFFF>{modified}
+    <color:#A0A0A0>Path: <color:#FFFFFF>{path}
+  logs-tail-header: "<color:#E2B700>Recent Log Entries <color:#A0A0A0>({count} lines)"
+  logs-tail-empty: "{prefix}<color:#A0A0A0>No recent log lines available."
+  hotspots-header: "<color:#E2B700>Redstone Hotspots <color:#A0A0A0>({count} clusters)"
+  hotspots-row: "<color:#E2B700>#{rank} <color:#FFFFFF>{world} <color:#A0A0A0>[<color:#FFFFFF>{x}, ~, {z}<color:#A0A0A0>] | Activity: <color:#00E262>{activity} <color:#A0A0A0>| Chunks: <color:#FFFFFF>{chunks} <color:#A0A0A0>| Status: {state}"
+  hotspots-row-hover: |-
+    <color:#A0A0A0>World: <color:#FFFFFF>{world}
+    <color:#A0A0A0>Center: <color:#FFFFFF>{x}, ~, {z}
+    <color:#A0A0A0>Updates: <color:#FFFFFF>{activity}
+    <color:#A0A0A0>Chunks: <color:#FFFFFF>{chunks}
+    <color:#A0A0A0>State: {state}
+    <color:#00E262>Click to suggest teleport command
+  hotspots-none: "{prefix}<color:#00E262>No active redstone hotspots detected."
+  hotspots-exported: "{prefix}<color:#00E262>Exported hotspot map to <color:#FFFFFF>{path}<color:#00E262>."
+  hotspots-export-empty: "{prefix}<color:#E20000>Cannot export hotspots because no redstone activity is tracked."
+  hotspots-export-failed: "{prefix}<color:#E20000>Failed to write hotspot export file. Check server logs."
+  inspect-enabled: "{prefix}<color:#00E262>Visual redstone inspector enabled for <color:#FFFFFF>{duration}s<color:#00E262>."
+  inspect-disabled: "{prefix}<color:#E2B700>Visual redstone inspector disabled."
+  inspect-bossbar: "<color:#E2B700>Inspector <color:#A0A0A0>| Chunk: <color:#FFFFFF>{ups} UPS <color:#A0A0A0>| MSPT: <color:#FFFFFF>{mspt}ms <color:#A0A0A0>| TPS: <color:#00E262>{tps}"
+  inspect-bossbar-folia: "<color:#E2B700>Inspector <color:#A0A0A0>| Chunk: <color:#FFFFFF>{ups} UPS <color:#A0A0A0>| Ratio: <color:#FFFFFF>{percent}% <color:#A0A0A0>| <color:#00E262>Folia"
+  inspect-actionbar: "<color:#00E262>★ <color:#A0A0A0>Chunk: <color:#FFFFFF>{ups}/{threshold} UPS <color:#A0A0A0>| Frozen nearby: <color:#E2B700>{frozen}"
+  inspect-actionbar-locked: "<color:#E20000>⚠ CHUNK LOCKED <color:#A0A0A0>| Remaining: <color:#E2B700>{remaining}s <color:#A0A0A0>| Chunk: <color:#FFFFFF>{ups} UPS"
+  snapshot-captured: "{prefix}<color:#E2B700>Captured snapshot <color:#FFFFFF>{id} <color:#A0A0A0>for <color:#FFFFFF>{material} <color:#A0A0A0>at <color:#FFFFFF>{x}, {y}, {z} <color:#A0A0A0>(Culprit: <color:#00E262>{culprit}<color:#A0A0A0>)"
+  snapshot-list-header: "<color:#E2B700>Forensic Snapshots <color:#A0A0A0>({count})"
+  snapshot-list-row: "<color:#E2B700>{id} <color:#A0A0A0>{time} | <color:#FFFFFF>{world} [{x}, {y}, {z}] <color:#A0A0A0>| <color:#E20000>{material} <color:#A0A0A0>| Culprit: <color:#00E262>{culprit}"
+  snapshot-view: |-
+    <color:#E2B700>Forensic Report: <color:#FFFFFF>{id}
+    <color:#A0A0A0>Captured: <color:#FFFFFF>{date}
+    <color:#A0A0A0>Location: <color:#FFFFFF>{x}, {y}, {z} ({world})
+    <color:#A0A0A0>Culprit: <color:#00E262>{culprit} <color:#A0A0A0>({uuid})
+    <color:#A0A0A0>Trigger: <color:#E20000>{material} <color:#A0A0A0>| Updates: <color:#FFFFFF>{chunk_count} chunk / {block_count} block
+    <color:#A0A0A0>Reason: <color:#FFFFFF>{reason}
+    <color:#A0A0A0>Components in cluster: <color:#FFFFFF>{total}
+  snapshot-view-component: "  <color:#A0A0A0>{material}: <color:#FFFFFF>{count}"
+  snapshot-empty: "{prefix}<color:#A0A0A0>No forensic snapshots recorded."
+  snapshot-cleared: "{prefix}<color:#00E262>All forensic snapshots cleared."
+  snapshot-deleted: "{prefix}<color:#00E262>Deleted snapshot <color:#FFFFFF>{id}<color:#00E262>."
+  snapshot-highlighted: "{prefix}<color:#00E262>Highlighting snapshot <color:#FFFFFF>{id} <color:#00E262>for 15s."
+  snapshot-not-found: "{prefix}<color:#E20000>Snapshot not found: <color:#FFFFFF>{id}"
+  snapshot-tp-success: "{prefix}<color:#00E262>Teleported to snapshot <color:#FFFFFF>{id} <color:#A0A0A0>at <color:#FFFFFF>{x}, {y}, {z} ({world})<color:#00E262>."
+  snapshot-world-unloaded: "{prefix}<color:#E20000>World <color:#FFFFFF>{world} <color:#E20000>is not currently loaded."
+  unfreeze-success: "{prefix}<color:#00E262>Unfroze <color:#FFFFFF>{count} <color:#00E262>redstone component(s)."
+  unfreeze-none: "{prefix}<color:#A0A0A0>No frozen components found to unfreeze."
+  unlock-success: "{prefix}<color:#00E262>Unlocked <color:#FFFFFF>{count} <color:#00E262>locked chunk(s)."
+  unlock-none: "{prefix}<color:#A0A0A0>No locked chunks found to unlock."
+  whitelist-added: "{prefix}<color:#00E262>Added chunk <color:#FFFFFF>{entry} <color:#00E262>to whitelist."
+  whitelist-exists: "{prefix}<color:#E2B700>Chunk <color:#FFFFFF>{entry} <color:#E2B700>is already whitelisted."
+  whitelist-removed: "{prefix}<color:#00E262>Removed chunk <color:#FFFFFF>{entry} <color:#00E262>from whitelist."
+  whitelist-missing: "{prefix}<color:#E20000>Chunk <color:#FFFFFF>{entry} <color:#E20000>is not in the whitelist."
+  whitelist-list-header: "<color:#E2B700>Whitelisted Chunks <color:#A0A0A0>(Enabled: {enabled}<color:#A0A0A0>, Count: <color:#FFFFFF>{count}<color:#A0A0A0>)"
+  whitelist-list-empty: "{prefix}<color:#A0A0A0>No whitelisted chunks configured."
+  whitelist-list-row: "  <color:#A0A0A0>- <color:#FFFFFF>{entry}"
+  help: |-
+    <color:#E2B700>AntiRedstoneLag <color:#A0A0A0>v{version}
+    <color:#00E262>/arl gui <color:#A0A0A0>- Open staff control panel
+    <color:#00E262>/arl redstone <on|off|notify|status> <color:#A0A0A0>- Manage protection mode
+    <color:#00E262>/arl alerts <on|off|status> <color:#A0A0A0>- Manage staff lag alerts
+    <color:#00E262>/arl inspect [seconds] <color:#A0A0A0>- Toggle live in-world inspector
+    <color:#00E262>/arl hotspots [page|export] <color:#A0A0A0>- View or export active clusters
+    <color:#00E262>/arl snapshot [list|view|tp|highlight|delete|clear] <color:#A0A0A0>- Manage forensic snapshots
+    <color:#00E262>/arl clear [type|count|cancel|timer|pause|resume] <color:#A0A0A0>- Entity & item cleaner
+    <color:#00E262>/arl unfreeze <all|here> <color:#A0A0A0>- Unfreeze throttled clocks
+    <color:#00E262>/arl unlock <all|here> <color:#A0A0A0>- Unlock locked chunks
+    <color:#00E262>/arl whitelist <add|remove|list> [world cx cz] <color:#A0A0A0>- Edit chunk whitelist
+    <color:#00E262>/arl stats <color:#A0A0A0>- View plugin statistics
+    <color:#00E262>/arl logs [latest|tail] <color:#A0A0A0>- View log files and entries
+    <color:#00E262>/arl reload <color:#A0A0A0>- Reload config and messages
+
+gui:
+  disabled: "{prefix}<color:#E20000>The Staff Inventory GUI is disabled in config.yml."
+  titles:
+    main: "<color:#1F1F1F>AntiRedstoneLag Staff Panel"
+    hotspots: "<color:#1F1F1F>Redstone Hotspots ({page}/{pages})"
+    snapshots: "<color:#1F1F1F>Forensic Snapshots ({page}/{pages})"
+    locked: "<color:#1F1F1F>Frozen & Locked ({page}/{pages})"
+    clearlagg: "<color:#1F1F1F>ClearLagg Controls"

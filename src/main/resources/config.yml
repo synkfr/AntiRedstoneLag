@@ -1,14 +1,14 @@
-# AntiRedstoneLag Configuration
-# Redstone lag prevention, diagnostics, and entity cleanup
+# AntiRedstoneLag v2 Configuration
+# Redstone lag prevention, forensic diagnostics, Staff GUI, and ClearLagg
 
 # Internal configuration version - do not modify
-config-version: "26.5"
+config-version: 2
 
 # Maximum redstone updates per chunk per reset interval
-chunk-threshold: 500
+chunk-threshold: 800
 
 # Updates per block before being considered a lag machine
-block-threshold: 15
+block-threshold: 30
 
 # Counter reset interval in ticks (20 ticks = 1 second)
 reset-interval-ticks: 20
@@ -20,15 +20,21 @@ debug: false
 redstone-enabled: true
 
 # Action to take when redstone exceeds threshold
-# Options: FREEZE (pause clock temporarily), NOTIFY (alert admins only without throttling or breaking), DISABLE (cancel signal temporarily), DROP (break and drop item), REMOVE (set to air)
+# Options: FREEZE, NOTIFY, DISABLE, DROP, REMOVE
 removal-action: FREEZE
+
+# Persistent storage for block owners, forensic snapshots, and statistics
+storage:
+  backend: AUTO
+  sqlite-file: "data/antiredstonelag.db"
+  persist-owners: true
+  persist-snapshots: true
+  owner-retention-days: 30
 
 # Ground item and entity cleaner with countdown broadcasts
 clearlagg:
   enabled: true
-  # Automatic clear interval in seconds (300 = 5 minutes, 0 = disabled)
   interval-seconds: 300
-  # Seconds before clear to broadcast countdown warnings
   countdown-seconds:
     - 60
     - 30
@@ -38,10 +44,14 @@ clearlagg:
     - 3
     - 2
     - 1
-  # Broadcast display type: CHAT, ACTION_BAR, TITLE, SUBTITLE, ALL, NONE
   broadcast-mode: CHAT
   clear-ground-items: true
-  # Entities to remove during clear (supports conditions: onGround, !isMounted, !hasName, !isTamed, !isLeashed, liveTime>100)
+  min-item-age-seconds: 30
+  merge-items: false
+  chunk-entity-caps:
+    enabled: false
+    max-mobs-per-chunk: 40
+    max-items-per-chunk: 100
   remove-entities:
     - "Arrow onGround"
     - "Spectral_Arrow onGround"
@@ -55,15 +65,8 @@ clearlagg:
     - "Dragon_Fireball"
     - "Wither_Skull"
     - "Shulker_Bullet"
-    - "Boat !isMounted"
-    - "Chest_Boat !isMounted"
-    - "Minecart !isMounted"
-    - "Chest_Minecart !isMounted"
-    - "Hopper_Minecart !isMounted"
     - "Tnt_Minecart"
-    - "Furnace_Minecart"
     - "Tnt liveTime>100"
-  # Entities that are 100% immune from clearing (SMP safe)
   entity-whitelist:
     - "Player"
     - "Villager"
@@ -78,11 +81,13 @@ clearlagg:
     - "Text_Display"
     - "Block_Display"
     - "Item_Display"
+    - "Hopper_Minecart"
+    - "Chest_Minecart"
+    - "Furnace_Minecart"
     - "* hasName"
     - "* isTamed"
     - "* isLeashed"
     - "* isMounted"
-  # Items that will NEVER be cleared when dropped on ground
   item-blacklist:
     - NETHER_STAR
     - BEACON
@@ -101,57 +106,88 @@ clearlagg:
     - NETHERITE_CHESTPLATE
     - NETHERITE_LEGGINGS
     - NETHERITE_BOOTS
-  # Emergency auto-clear when server TPS drops below this value (0.0 to disable)
   tps-emergency-threshold: 0.0
 
-# Forensic snapshot system - records 3D structure and culprit metadata when lag machines are detected
+# Forensic snapshot system
 snapshot:
   enabled: true
   radius: 3
   max-snapshots: 25
   save-to-disk: true
 
-# Non-destructive freezing system - temporarily pauses clocks before escalating
+# Non-destructive freezing system
 freeze:
   enabled: true
   duration-seconds: 15
   max-freeze-attempts: 3
+  notify-on-resume: true
 
-# Adaptive performance scaling - adjusts thresholds dynamically based on MSPT and TPS
+# Adaptive performance scaling
 adaptive:
   enabled: true
   target-mspt: 40.0
   min-tps: 18.0
   healthy-headroom-multiplier: 1.5
 
-# Clock fingerprinting - distinguishes periodic clocks from bursty sorting systems
+# Multi-pattern clock fingerprinting
 fingerprint:
   enabled: true
-  clock-strictness: 0.7
+  clock-strictness: 0.85
+  history-size: 8
+  max-interval-ms: 500
+  variance-tolerance-ms: 45
 
-# Player proximity throttling - enforces stricter limits on unattended redstone
+# Specialized lag detectors
+detectors:
+  piston-loop-threshold: 16
+  hopper-limiter:
+    enabled: false
+    max-transfers-per-interval: 64
+  crafter-limiter:
+    enabled: true
+    max-crafts-per-interval: 40
+  minecart-cluster:
+    enabled: true
+    max-minecarts-per-block: 16
+    action: REMOVE_EXCESS
+
+# Player proximity throttling
 proximity:
   enabled: true
   player-radius: 96
-  unattended-strict-multiplier: 0.6
+  unattended-strict-multiplier: 0.8
 
-# Lockdown system (EMP) - Prevents players from repeatedly triggering lag machines
+# Lockdown system (EMP)
 lockdown:
   enabled: true
-  # Duration in seconds to lock down the chunk when the threshold is exceeded
   duration-seconds: 60
 
-# Warning system - warn players before removing their redstone
+# Owner threshold warning system
 warning:
   enabled: true
-  # Percentage of threshold at which to warn (e.g., 80 = warn at 80% of threshold)
   threshold-percent: 80
+
+# Visual in-world redstone inspector (/arl inspect)
+inspector:
+  default-duration-seconds: 30
+  max-duration-seconds: 300
+  show-block-particles: true
+  show-chunk-borders: true
+  show-actionbar: true
+
+# Interactive Staff Inventory GUI (/arl gui)
+gui:
+  enabled: true
+  refresh-ticks: 20
 
 # Worlds where the plugin is active (use * for all worlds)
 enabled-worlds:
   - "*"
 
-# Whitelist mode - only monitor specific chunks instead of all chunks
+# Optional per-world threshold and action overrides
+worlds: {}
+
+# Whitelist mode - only monitor specific chunks when enabled
 whitelist:
   enabled: false
   chunks:
@@ -161,18 +197,30 @@ whitelist:
 alerts:
   enabled: true
   log-to-console: true
-  # Notify admins with culprit info when TPS drops below adaptive.min-tps or MSPT exceeds adaptive.target-mspt due to redstone
   notify-on-tps-lag: true
-  # Only send redstone threshold/mitigation alerts when the server is lagging
   only-when-lagging: false
 
-# Advanced logging system
+# Async rotating file logging system
 logging:
   enabled: true
   console-mirror: false
   max-files: 10
   max-size-mb: 10
   performance-stats: true
+
+# External integrations
+integrations:
+  placeholderapi:
+    enabled: true
+  discord:
+    enabled: false
+    webhook-url: ""
+    cooldown-seconds: 30
+    events:
+      - LOCKDOWN
+      - TPS_LAG
+      - REMOVAL
+      - SNAPSHOT
 
 # Redstone components to monitor
 redstone-components:
